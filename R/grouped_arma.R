@@ -3,7 +3,7 @@
 #' Fit an grouped ARMA model to a univariate time series by conditional least squares.
 #' @param x A numeric vector or time series.
 #' @return Object of time \code{arma}.
-#' @importFrom stats is.test as.ts
+#' @importFrom stats is.ts as.ts
 #' @export
 grouped_arma <- function(x, order = c(1, 1), lag = NULL, coef = NULL,
                          include.intercept = TRUE, series = NULL, qr.tol = 1e-07, ...)

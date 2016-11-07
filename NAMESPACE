@@ -2,4 +2,4 @@
 
 export(grouped_arma)
 importFrom(stats,as.ts)
-importFrom(stats,is.test)
+importFrom(stats,is.ts)
