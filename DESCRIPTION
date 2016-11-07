@@ -1,9 +1,30 @@
 Package: groupedtseries
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Analysis of grouped time series
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
+Author@R: c(person("Michael", "Hörner", email="XXX",
+                    role=c("aut", "cre")),
+            person("Stefan", "Feuerriegel", email="stefan.feuerriegel@is.uni-freiburg.de",
+                    role=c("aut")))
+Author: Michael Hörner [aut, cre],
+  Stefan Feuerriegel [aut]
+Maintainer: Michael Hörner <yourfault@somewhere.net>
 Description: More about what it does (maybe more than one line)
-License: What license is it under?
+License: MIT + file LICENSE
+URL: https://github.com/MichaelHoerner/groupedtseries
+BugReports: https://github.com/MichaelHoerner/groupedtseries/issues
+Depends:
+    R (>= 2.10),
+    tseries
+Imports:
+    Rcpp
+LinkingTo:
+    Rcpp
+Suggests:
+    testthat,
+    knitr,
+    rmarkdown,
+    devtools
 LazyData: TRUE
+RoxygenNote: 5.0.1
+VignetteBuilder: knitr
