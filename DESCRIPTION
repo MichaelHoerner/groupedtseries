@@ -9,7 +9,14 @@ Author@R: c(person("Michael", "Hörner", email="hoerner.mj@googlemail.com",
 Author: Michael Hörner [aut, cre],
   Stefan Feuerriegel [aut]
 Maintainer: Michael Hörner <hoerner.mj@googlemail.com>
-Description: More about what it does (maybe more than one line)
+Description: Time series analysis commonly investigates how movements of
+  prices and other variables can be explained by historic values. Similarly,
+  multivariate time series analysis studies how different time series
+  influence each other. This package implements methods for studying a
+  panel of unrelated time series -- we refer to it as "grouped" time series.
+  Possible applications stem from panel observations of time series (e.g. from
+  different participants in experiments) or from time series with breaks (e.g.
+  from missing values). The following models are adapted: (1) ARMA, (2) GARCH.
 License: MIT + file LICENSE
 URL: https://github.com/MichaelHoerner/groupedtseries
 BugReports: https://github.com/MichaelHoerner/groupedtseries/issues
