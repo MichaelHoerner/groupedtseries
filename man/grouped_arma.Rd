@@ -5,15 +5,56 @@
 \title{Fit grouped ARMA model to time series}
 \usage{
 grouped_arma(x, order = c(1, 1), lag = NULL, coef = NULL,
-  include.intercept = TRUE, series = NULL, qr.tol = 1e-07, ...)
+  include.intercept = TRUE, series = NULL, qr.tol = 1e-07,
+  quick.estimation = FALSE, ...)
 }
 \arguments{
-\item{x}{A numeric vector or time series.}
+\item{x}{a two-dimensional numeric vector of a grouped time series with accompanying group index in second dimension.
+One-dimensional if input shall be only a single time series.}
+
+\item{order}{a vector c(p,q) that indicates the order p of the AR part and q of the MA part}
+
+\item{lag}{a list with components \code{ar} and \code{ma}.
+Each component is an integer vector, specifying the AR and MA lags that are
+included in the model. If both, \code{order} and \code{lag}, are
+given, only the specification from \code{lag} is used.}
+
+\item{coef}{If given this numeric vector is used as the initial estimate
+of the ARMA coefficients. The preliminary estimator suggested in
+Hannan and Rissanen (1982) is used for the default initialization.}
+
+\item{include.intercept}{Should the model contain an intercept?}
+
+\item{series}{name for the series. Defaults to \code{deparse(substitute(x))}.}
+
+\item{qr.tol}{the \code{tol} argument for \code{\link{qr}} when computing
+the asymptotic standard errors of \code{coef}.}
+
+\item{quick.estimation}{logical value (TRUE, FALSE) indicating whether a quick estimation
+mode shall be used}
+
+\item{\dots}{additional arguments for \code{\link{optim}} when fitting
+the model.}
 }
 \value{
-Object of time \code{arma}.
+Object of class \code{arma}.
+   \item{lag}{the lag specification of the fitted model.}
+   \item{coef}{estimated ARMA coefficients for the fitted model across all grouped time series.}
+   \item{css}{the conditional sum-of-squared errors.}
+   \item{n.used}{the number of observations of \code{x}.}
+   \item{residuals}{the series of residuals.}
+   \item{fitted.values}{the fitted series.}
+   \item{series}{the name of the series \code{x}.}
+   \item{frequency}{the frequency of the series \code{x}.}
+   \item{call}{the call of the \code{arma} function.}
+   \item{vcov}{estimate of the asymptotic-theory covariance matrix for the
+     coefficient estimates.}
+   \item{convergence}{The \code{convergence} integer code from
+       \code{\link{optim}}.}
+   \item{include.intercept}{Does the model contain an intercept?}
 }
 \description{
-Fit an grouped ARMA model to a univariate time series by conditional least squares.
+Fit an ARMA model with the order c(p,q) to a group of univariate time series
+by finding coefficients that serve best the whole group.
 }
 
