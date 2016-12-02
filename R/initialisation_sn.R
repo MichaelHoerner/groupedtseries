@@ -12,7 +12,7 @@
 # initialisation des variables
 init_sn <- matrix(1,nb_obs,nb_init)
 init_tau <- matrix(0,regime,nb_init)
-n_ii <- matrix(0,regime,regime,nb_init)
+n_ii <- array(0,dim = c(regime,regime,nb_init))
 interval <- nb_obs/(regime)
 
 if(regime>1) {

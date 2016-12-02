@@ -56,7 +56,7 @@
 #' @importFrom stats is.ts as.ts
 #' @export
 
-MS_ARMA_MCMC <- function(y,Expl_X=NULL,nb_MCMC=10000,regime=1,AR_lags=1,MA_lags=1,CP_or_MS="MS",temper=1,force_reg_1=0,sn_dep=0,sn_sig_dep=0,theta_dep=0,sigma_dep=0) {
+MS_ARMA_MCMC <- function(y,Expl_X=NULL,nb_MCMC=10,regime=4,AR_lags=1,MA_lags=1,CP_or_MS="MS",temper=1,force_reg_1=0,sn_dep=0,sn_sig_dep=0,theta_dep=0,sigma_dep=0) {
 #################################################################################################################?
 ##### Function that draws realizations of the posterior distribution of an
 ##### IHMM-ARMAX model with different break structures for the mean
@@ -139,18 +139,18 @@ if(seed_id==1) {
    } #
 
 ###### test issues
-Expl_X<-NULL
-nb_MCMC<-10
-regime<-1
-AR_lags<-1
-MA_lags<-1
-CP_or_MS<-"MS"
-temper<-1
-force_reg_1<-0
-sn_dep<-NULL
-sn_sig_dep<-NULL
-theta_dep<-NULL
-sigma_dep<-NULL
+# Expl_X<-NULL
+# nb_MCMC<-10
+# regime<-1
+# AR_lags<-1
+# MA_lags<-1
+# CP_or_MS<-"MS"
+# temper<-1
+# force_reg_1<-0
+# sn_dep<-NULL
+# sn_sig_dep<-NULL
+# theta_dep<-NULL
+# sigma_dep<-NULL
 ###################
 
 
@@ -294,15 +294,27 @@ if(regime>1) {
  ### d?part
  ###############
  if(Rolling_MCMC==1) {
-  # dens_chain[1] <- .C("dens_CP_ARMA_c", as.vector(y_AR), X_AR,
-  #               AR_lags, MA_lags, theta_dep, sigma_dep, sn_dep,
-  #               sn_sig_dep, 1, PACKAGE = "tseries")
-  # dens_chain[1] <- dens_CP_ARMA(y_AR,X_AR,AR_lags,MA_lags,theta_dep,sigma_dep,sn_dep,sn_sig_dep) #OwnFunction
-  # theta <- theta_dep
-  # sigma <- sigma_dep
-  # sn <- double(sn_dep)
-  # sn_sig <- double(sn_sig_dep)
-  # regime <-  max(sn)
+  dens <- 0
+  dens_chain[1] <- .C("dens_CP_ARMA_c",
+                      as.vector(y_AR, mode = "double"),
+                      as.vector(X_AR),
+                      as.integer(AR_lags),
+                      as.integer(MA_lags),
+                      as.vector(theta_dep, mode = "double"),
+                      as.vector(sigma_dep, mode = "double"),
+                      as.vector(sn_dep, mode = "double"),
+                      as.vector(sn_sig, mode = "double"),
+                      as.integer(sn_sig_dep),
+                      as.integer(taille),
+                      dens = as.double(dens),
+                      eps_out = as.vector(eps_t, mode="double"),
+                      PACKAGE="groupedtseries")$dens
+
+  theta <- theta_dep
+  sigma <- sigma_dep
+  sn <- double(sn_dep)
+  sn_sig <- double(sn_sig_dep)
+  regime <-  max(sn)
  } else {
   if(regime==1) {
     #disp('Initialisation by Particle Swarm Optimization')
