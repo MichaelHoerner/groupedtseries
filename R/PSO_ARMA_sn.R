@@ -85,13 +85,13 @@ for (  i in 1 : nb_iter ) {
                     theta_prop <- t(mvrnorm(1, mu_theta,Sigma_theta)) ## Normal multivari? RESTRICTION A METTRE ?
                     test <- 1
                     if(AR_lags>0) {
-                        root_AR <- polyroot(rev(1 - t(theta_prop[2:1+AR_lags])))
+                        root_AR <- polyroot(rev(c(1, -t(theta_prop[2:(1+AR_lags)]))))
                         if(sum(abs( Re(root_AR))>=1)!=0) {
                             test <- 0
                            } #
                        } #
                     if(MA_lags>0) {
-                        root_MA <- polyroot(rev(1 - na.omit(t(theta_prop[2+AR_lags:taille_ARMA]))))
+                        root_MA <- polyroot(rev(c(1, -t(theta_prop[(2+AR_lags):taille_ARMA]))))
                         if(sum(abs( Re( root_MA))>=1)!=0) {
                             test <- 0
                            } #
@@ -176,13 +176,13 @@ for (  i in 1 : nb_iter ) {
                 theta_prop <- theta_prop_all[((q-1)*taille_ARMA+1):(q*taille_ARMA)]
                 test <- 1
                 if(AR_lags>0) {
-                    root_AR <- polyroot(rev(1 - t(theta_prop[2:(1+AR_lags)])))
+                    root_AR <- polyroot(rev(c(1, -t(theta_prop[2:(1+AR_lags)]))))
                     if(sum(abs(Re(root_AR))>=1)!=0) {
                         test <- 0
                        } #
                    } #
                 if(MA_lags>0) {
-                    root_MA <- polyroot(rev(1 - t(theta_prop[(2+AR_lags):taille_ARMA])))
+                    root_MA <- polyroot(rev(c(1, -t(theta_prop[(2+AR_lags):taille_ARMA]))))
                     if(sum(abs( Re( root_MA))>=1)!=0) {
                         test <- 0
                        } #

@@ -86,21 +86,21 @@ void dens_CP_ARMA_c(double *y, double *X, int *AR_lags, int *MA_lags, double *th
                 if(i+1<(*taille))
                 {
                     X[(1+(*AR_lags))*(*taille)+i+1] = eps;
-                    //if((*MA_lags)>1)
-                    //{
-                    //  if(i+1<(*MA_lags))
-                    //  {
-                    //      iter = i;
-                    //  }
-                    //  else
-                    //  {
-                    //      iter = (*MA_lags)-1;
-                    //  }
-                    //  for(z=0;z<iter;z++)
-                    //  {
-                    //      X[(1+(*AR_lags)+1+z)*(*taille)+i+1] = X[(1+(*AR_lags))*(*taille)+i-z];
-                    //  }
-                    //}
+                    if((*MA_lags)>1)
+                    {
+                      if(i+1<(*MA_lags))
+                      {
+                          iter = i;
+                      }
+                      else
+                      {
+                          iter = (*MA_lags)-1;
+                      }
+                      for(z=0;z<iter;z++)
+                      {
+                          X[(1+(*AR_lags)+1+z)*(*taille)+i+1] = X[(1+(*AR_lags))*(*taille)+i-z];
+                      }
+                    }
                 }
             }
             eps_out[i] = eps;

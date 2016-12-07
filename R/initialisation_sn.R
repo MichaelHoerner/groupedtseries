@@ -68,7 +68,7 @@ if(regime>1) {
 } else {
     for (  i in 1 : nb_init ) {
         init_tau[1,i] <- nb_obs
-        n_ii[1,i] <- nb_obs
+        n_ii[1,1,i] <- nb_obs
        } #
    } #
 

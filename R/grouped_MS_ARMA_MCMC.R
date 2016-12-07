@@ -56,7 +56,7 @@
 #' @importFrom stats is.ts as.ts
 #' @export
 
-MS_ARMA_MCMC <- function(y,Expl_X=NULL,nb_MCMC=10,regime=4,AR_lags=1,MA_lags=1,CP_or_MS="MS",temper=1,force_reg_1=0,sn_dep=0,sn_sig_dep=0,theta_dep=0,sigma_dep=0) {
+MS_ARMA_MCMC <- function(y,Expl_X=NULL,nb_MCMC=10,regime=1,AR_lags=1,MA_lags=1,CP_or_MS="MS",temper=1,force_reg_1=0,sn_dep=NULL,sn_sig_dep=NULL,theta_dep=NULL,sigma_dep=NULL) {
 #################################################################################################################?
 ##### Function that draws realizations of the posterior distribution of an
 ##### IHMM-ARMAX model with different break structures for the mean
@@ -166,7 +166,7 @@ if(is.null(theta_dep) || is.null(sigma_dep)) {
 
 
 
-if(force_reg_1!=0 && regime>1) {
+if((force_reg_1!=0) && (regime>1)) {
     regime <- 1
     ##disp('Initial number of regime set to one as the model does not have a structure to handle breaks')
    } #
@@ -209,6 +209,15 @@ taille_ARMA <- 1 + AR_lags + MA_lags ## taille_ARMA est une constante p   } #ant
 
 eps_t <- double(length=taille)
 
+
+###################################DEBUG#################################
+debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+debug_count <- 0
+xtable_debug_dataframe <- xtable(debug_dataframe)
+debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+write.csv2(xtable_debug_dataframe, file = debug_filename)
+#########################################################################
+
 # if(Rolling_MCMC==0)
 #     ##disp('********************************************************************')
 #     if(taille_Expl_X>0)
@@ -241,6 +250,15 @@ eps_t <- double(length=taille)
 ###############
 ### Initilization of the hyper-parameters
 ###############
+
+###################################DEBUG#################################
+debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+debug_count <- 1
+xtable_debug_dataframe <- xtable(debug_dataframe)
+debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+write.csv2(xtable_debug_dataframe, file = debug_filename)
+#########################################################################
+
 Struct_Prior <- define_prior(taille_ARMA,CP_or_MS) ## OwnFunction
 V_prior_inv <- Struct_Prior$V_prior_inv
 dv_prior <- Struct_Prior$dv_prior
@@ -262,16 +280,25 @@ accept_e <- 0
 dens_chain <- matrix(0,nb_MCMC,1)
 nb_init <- 1
 if(regime>1) {
-  if(regime>4 && taille>1000) {
+  if((regime>4) && (taille>1000)) {
     nb_init <- 60
-  } else if (regime>4 && taille<1000) {
+  } else if ((regime>4) && (taille<1000)) {
     nb_init <- 50 }
   else {
-    nb_init <- 10
+    nb_init <- 1 ###change value: 10
   } #
 } #
  regime_sn_max <- 20 ## Maximum number of regimes in the mean
  regime_sn_sig_max <- 20 ## Maximum number of regimes in the variance
+
+ ###################################DEBUG#################################
+ debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+ debug_count <- 2
+ xtable_debug_dataframe <- xtable(debug_dataframe)
+ debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+ write.csv2(xtable_debug_dataframe, file = debug_filename)
+ #########################################################################
+
  templist <- initialisation_sn(nb_init,taille,regime,0) ## OwnFunction ## Generation of starting values of the mean state vector
  init_sn <- templist[[1]]
  templist <- initialisation_sn(nb_init,taille,regime,0) ## OwnFunction ## Generation of starting values of the variance state vector
@@ -318,6 +345,15 @@ if(regime>1) {
  } else {
   if(regime==1) {
     #disp('Initialisation by Particle Swarm Optimization')
+
+    ###################################DEBUG#################################
+    debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+    debug_count <- 3
+    xtable_debug_dataframe <- xtable(debug_dataframe)
+    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    write.csv2(xtable_debug_dataframe, file = debug_filename)
+    #########################################################################
+
     templist <- PSO_ARMA_sn(y_AR,X_AR,regime_sn_max,regime_sn_sig_max,AR_lags,MA_lags,init_sn[,1],init_sn[,1],nb_iter,nb_part) ## OwnFunction
     dens_chain[1] <- templist[[1]]
     theta <- templist[[2]]
@@ -330,7 +366,16 @@ if(regime>1) {
         if((i%%20) == 0) {
          #disp(['Iteration ' num2str(i) ' on ' num2str(nb_init)])
         } #self function call
-        res_dep <- MS_ARMA_MCMC(y,Expl_X,30,regime,AR_lags_init,MA_lags,CP_or_MS,temper,0,init_sn[,i],init_sn_sig[,i]) ## OwnFunction
+
+        ###################################DEBUG#################################
+        debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+        debug_count <- 4
+        xtable_debug_dataframe <- xtable(debug_dataframe)
+        debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+        write.csv2(xtable_debug_dataframe, file = debug_filename)
+        #########################################################################
+        #### change value - 3rd// nb_MCMC - 30
+        res_dep <- MS_ARMA_MCMC(y,Expl_X,10,regime,AR_lags,MA_lags,CP_or_MS,temper,0,init_sn[,i],init_sn_sig[,i]) ## OwnFunction
         maxi <- max(res_dep$post_dens)
         ind <- which.max(res_dep$post_dens)
         init_reg[i,] <- res_dep$post_regime[ind,]
@@ -348,7 +393,21 @@ if(regime>1) {
       sn_sig <- init_sn_sig[,ind]
     } else {
     #disp('Initialisation by Particle Swarm Optimization')
-    #[dens_chain[1],theta,sigma] <- PSO_ARMA_sn(y_AR,X_AR,regime_sn_max,regime_sn_sig_max,AR_lags,MA_lags,sn_dep,sn_sig_dep,nb_iter,nb_part) ## OwnFunction
+
+      ###################################DEBUG#################################
+      debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+      debug_count <- 5
+      xtable_debug_dataframe <- xtable(debug_dataframe)
+      debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+      write.csv2(xtable_debug_dataframe, file = debug_filename)
+      #########################################################################
+
+    templist <- PSO_ARMA_sn(y_AR,X_AR,regime_sn_max,regime_sn_sig_max,AR_lags,MA_lags,sn_dep,sn_sig_dep,nb_iter,nb_part) ## OwnFunction
+
+    dens_chain[1] <- templist[[1]]
+    theta <- templist[[2]]
+    sigma <- templist [[3]]
+
     sn <- sn_dep
     sn_sig <- sn_sig_dep
     } #
@@ -374,11 +433,29 @@ if(regime>1) {
  ###############
  P <- matrix(0,regime_sn_max,regime_sn_max)
  alpha <- 0.5*matrix(1,regime_sn_max,regime_sn_max)
+
+ ###################################DEBUG#################################
+ debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+ debug_count <- 6
+ xtable_debug_dataframe <- xtable(debug_dataframe)
+ debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+ write.csv2(xtable_debug_dataframe, file = debug_filename)
+ #########################################################################
+
  n_ii <- comptage(taille,sn,regime_sn_max)[[1]] ## OwnFunction
  n_ii_sig <- comptage(taille,sn_sig,regime_sn_sig_max)[[1]] ## OwnFunction
  for (q in 1 : regime_sn_max) {
    P[q,] <- dirichlet_sample(alpha[q,] + n_ii[q,]) ## OwnFunction
  } #
+
+ ###################################DEBUG#################################
+ debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+ debug_count <- 7
+ xtable_debug_dataframe <- xtable(debug_dataframe)
+ debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+ write.csv2(xtable_debug_dataframe, file = debug_filename)
+ #########################################################################
+
  mu_theta <- Draw_mu_theta(theta,Sigma_theta_inv,taille_ARMA,regime,mean_mu_prior_theta,Sigma_mu_prior_theta_inv) ## OwnFunction
  Sigma_theta_inv <- Draw_Sigma_theta(theta,mu_theta,V_prior_inv,dv_prior,regime,taille_ARMA) ## OwnFunction
  Sigma_theta <- solve(Sigma_theta_inv) ## MatlabFunction
@@ -393,13 +470,13 @@ if(regime>1) {
       theta_prop <- as.matrix(mvrnorm(1, mu_theta,Sigma_theta)) ## OwnFunction ## MatlabFunction ## Normal multivari? RESTRICTION A METTRE ?
       test <- 1
       if(AR_lags>0) {
-        root_AR <- polyroot(rev(1 - t(theta_prop[2:(1+AR_lags)]))) ## OwnFunction ## MatlabFunction ## Check if complex numbers are allowed
+        root_AR <- polyroot(rev(c(1, -t(theta_prop[2:(1+AR_lags)])))) ## OwnFunction ## MatlabFunction ## Check if complex numbers are allowed
         if(sum(abs(Re(root_AR))>=1)!=0) { ## MatlabFunction
           test <- 0
         } #
       } #
       if(MA_lags>0) {
-        root_MA <- polyroot(rev(1 - t(theta_prop[(2+AR_lags):taille_ARMA])))
+        root_MA <- polyroot(rev(c(1, -t(theta_prop[(2+AR_lags):taille_ARMA]))))
         if(sum(abs(Re(root_MA))>=1)!=0) {
           test <- 0
         } #
@@ -475,7 +552,7 @@ if(regime>1) {
    post_hier_rho <- matrix(0,nb_MCMC-burn,1)
    theta_t <- array(0,dim=c(taille_ARMA,taille,(nb_MCMC-burn)))
    sigma_t <- matrix(0,taille,(nb_MCMC-burn))
-   y_for <- matrix(0,nb_forecast,(nb_MCMC-burn-1))
+   y_for <- matrix(0,nb_forecast,(nb_MCMC-burn)) ##change value -> cut out -1
    ################################################
    #### Initialisation IHMM
    ################################################
@@ -499,6 +576,15 @@ if(regime>1) {
    for (i in 1 : regime) {
     vect_a[i] <- sum(n_ii[,i])
     } #
+
+   ###################################DEBUG#################################
+   debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+   debug_count <- 8
+   xtable_debug_dataframe <- xtable(debug_dataframe)
+   debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+   write.csv2(xtable_debug_dataframe, file = debug_filename)
+   #########################################################################
+
    IHMM$gamma <- dirichlet_sample(vect_a)  ## OwnFunction
    IHMM$m <- table_IHMM(IHMM,n_ii,regime_sn_max) ## OwnFunction
    IHMM$r <- overriding(IHMM,regime_sn_max,sn[1]) ## OwnFunction
@@ -512,6 +598,15 @@ if(regime>1) {
    IHMM$etha <- templist[[3]]
 
    IHMM_sig <- IHMM
+
+   ###################################DEBUG#################################
+   debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+   debug_count <- 9
+   xtable_debug_dataframe <- xtable(debug_dataframe)
+   debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+   write.csv2(xtable_debug_dataframe, file = debug_filename)
+   #########################################################################
+
    IHMM_sig$gamma <- dirichlet_sample(vect_a) ## OwnFunction
    IHMM_sig$m<- table_IHMM(IHMM_sig,n_ii_sig,regime_sn_sig_max) ## OwnFunction
    IHMM_sig$r <- overriding(IHMM_sig,regime_sn_sig_max,sn_sig[1]) ## OwnFunction
@@ -526,6 +621,14 @@ if(regime>1) {
       #not clear whether result shall be a matrix or scalar (in matlab function can give out matrix)
     } #
    } #
+
+   ###################################DEBUG#################################
+   debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+   debug_count <- 10
+   xtable_debug_dataframe <- xtable(debug_dataframe)
+   debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+   write.csv2(xtable_debug_dataframe, file = debug_filename)
+   #########################################################################
 
    templist <- prior(IHMM_sig,regime_sn_sig_max,n_ii_sig) ## OwnFunction
    IHMM_sig$alpha <- templist[[1]]
@@ -550,6 +653,8 @@ if(regime>1) {
  while(i<=nb_MCMC) {
   #progressbar(i/nb_MCMC)
   if(i%%500==0) {
+
+
     #disp('********************************************************************')
     #disp('********************************************************************')
     #disp(['************* TEMPERING : ' num2str(temper) ' ******'])
@@ -623,6 +728,16 @@ if(regime>1) {
         fin <- z+saut_MH-1
       } #
       indice <- saut_MH
+
+      ###################################DEBUG#################################
+      debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC, i=i)
+      debug_count <- 11
+      xtable_debug_dataframe <- xtable(debug_dataframe)
+      debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+      write.csv2(xtable_debug_dataframe, file = debug_filename)
+      #########################################################################
+
+
       templist <- calc_gradient_Hessian(y_AR,X_AR,theta,sigma,sn,sn_sig,regime,AR_lags,MA_lags,inv_Sig_prior,temper) ## OwnFunction ##  Computation of the gradient
       gradient_move <- templist[[1]]
       Hessian_approx_move <- templist[[2]]
@@ -630,8 +745,17 @@ if(regime>1) {
       inv_C <- solve(C)
       inv_G_move <- inv_C%*%t(inv_C) #unsure if matrix calculation needed
       ###### New candidate for the ARMA parameters
+
+      ###################################DEBUG#################################
+      debug_dataframe <- data.frame(adapt_rate_ARMA = adapt_rate_ARMA[indice], inv_C = inv_C, rnorm = rnorm(saut_MH), Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+      debug_count <- 111
+      xtable_debug_dataframe <- xtable(debug_dataframe)
+      debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+      write.csv2(xtable_debug_dataframe, file = debug_filename)
+      #########################################################################
+
       mu_prop <- theta[z:fin] + adapt_rate_ARMA[indice]^2/2*inv_G_move%*%gradient_move[z:fin] ## OwnFunction
-      theta_prop[z:fin] <- mu_prop + adapt_rate_ARMA[indice]*inv_C*rnorm(saut_MH) ## randn(saut_MH, 1) ok<*MINV> ## OwnFunction
+      theta_prop[z:fin] <- mu_prop + adapt_rate_ARMA[indice]*inv_C%*%cbind(rnorm(saut_MH)) ## randn(saut_MH, 1) ok<*MINV> ## OwnFunction
 
       test <- 1
       deb_etat <- ceiling(z/taille_ARMA)
@@ -639,13 +763,13 @@ if(regime>1) {
       for (q in deb_etat : fin_etat) {
         ind <- (q-1)*taille_ARMA
         if(AR_lags>0) {
-          root_AR <- polyroot(rev(1 - t(theta_prop[(ind+2):(ind+1+AR_lags)])))
+          root_AR <- polyroot(rev(c(1, -t(theta_prop[(ind+2):(ind+1+AR_lags)]))))
           if(sum(abs(Re(root_AR))>=1)!=0) {
             test <- 0
           } #
         } #
         if(MA_lags>0) {
-          root_MA <- polyroot(rev(1 -t(theta_prop[(ind+2+AR_lags):(ind+taille_ARMA)])))
+          root_MA <- polyroot(rev(c(1, -t(theta_prop[(ind+2+AR_lags):(ind+taille_ARMA)]))))
           if(sum(abs(Re(root_MA))>=1)!=0){
             test <- 0
           } #
@@ -677,9 +801,17 @@ if(regime>1) {
         #### Prior evaluations for the candidate and the current
         #### parameters.
         for (q in deb_etat : fin_etat) {
-          prior_stay <- prior_stay -taille_ARMA*0.5*log(2*pi) -0.5*log(det_Sig_prior) -0.5*t(theta[((q-1)*taille_ARMA+1):(q*taille_ARMA)]-mu_theta)%*%inv_Sig_prior%*%(theta[(q-1)*taille_ARMA+1:q*taille_ARMA]-mu_theta)
-          prior_move <- prior_move -taille_ARMA*0.5*log(2*pi) -0.5*log(det_Sig_prior) -0.5*t(theta_prop[((q-1)*taille_ARMA+1):(q*taille_ARMA)]-mu_theta)%*%inv_Sig_prior%*%(theta_prop[(q-1)*taille_ARMA+1:q*taille_ARMA]-mu_theta)
+          prior_stay <- prior_stay -taille_ARMA*0.5*log(2*pi) -0.5*log(det_Sig_prior) -0.5*t(theta[((q-1)*taille_ARMA+1):(q*taille_ARMA)]-mu_theta)%*%inv_Sig_prior%*%(theta[((q-1)*taille_ARMA+1):(q*taille_ARMA)]-mu_theta)
+          prior_move <- prior_move -taille_ARMA*0.5*log(2*pi) -0.5*log(det_Sig_prior) -0.5*t(theta_prop[((q-1)*taille_ARMA+1):(q*taille_ARMA)]-mu_theta)%*%inv_Sig_prior%*%(theta_prop[((q-1)*taille_ARMA+1):(q*taille_ARMA)]-mu_theta)
         } #
+
+        ###################################DEBUG#################################
+        debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+        debug_count <- 12
+        xtable_debug_dataframe <- xtable(debug_dataframe)
+        debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+        write.csv2(xtable_debug_dataframe, file = debug_filename)
+        #########################################################################
 
        templist <- calc_gradient_Hessian(y_AR,X_AR,theta_prop,sigma,sn,sn_sig,regime,AR_lags,MA_lags,inv_Sig_prior,temper) ## OwnFunction
         gradient_stay <- templist[[1]]
@@ -738,9 +870,9 @@ if(regime>1) {
       nb_max_count <- 100
       count <- 1
 
-      while(test==0 && count<nb_max_count) {
+      while((test==0) && (count<nb_max_count)) {
         theta_prop <- as.matrix(mvrnorm(1,mu,Sigma)) ## Tirage dans la distribution conditionelle ## MatlabFunction
-        root_AR <- polyroot(rev(1 -t(theta_prop[2:taille_ARMA])))
+        root_AR <- polyroot(rev(c(1, -t(theta_prop[2:taille_ARMA]))))
         if(sum(abs(Re(root_AR))>=1)==0) {
           test <- 1
         } #
@@ -755,13 +887,13 @@ if(regime>1) {
     theta_prop <- as.matrix(mvrnorm(1,mu_theta,Sigma_theta))
     test <- 1
     if(AR_lags>0) {
-      root_AR <- polyroot(rev(1 -t(theta_prop[2:(1+AR_lags)])))
+      root_AR <- polyroot(rev(c(1, -t(theta_prop[2:(1+AR_lags)]))))
       if(sum(abs(Re(root_AR))>=1)!=0){
         test <- 0
       } #
     } #
     if(MA_lags>0) {
-      root_MA <- polyroot(rev(1 - t(theta_prop[(2+AR_lags):taille_ARMA])))
+      root_MA <- polyroot(rev(c(1, -t(theta_prop[(2+AR_lags):taille_ARMA]))))
       if(sum(abs(Re(root_MA))>=1)!=0){
         test <- 0
       } #
@@ -775,6 +907,15 @@ if(regime>1) {
    ###############
    #### Sampling of the hierarchical parameters of the ARMA
    ###############
+
+   ###################################DEBUG#################################
+   debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+   debug_count <- 13
+   xtable_debug_dataframe <- xtable(debug_dataframe)
+   debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+   write.csv2(xtable_debug_dataframe, file = debug_filename)
+   #########################################################################
+
    mu_theta <- Draw_mu_theta(theta,Sigma_theta_inv,taille_ARMA,regime_sn_max,mean_mu_prior_theta,Sigma_mu_prior_theta_inv) ## OwnFunction
    Sigma_theta_inv <- Draw_Sigma_theta(theta,mu_theta,V_prior_inv,dv_prior,regime_sn_max,taille_ARMA) ## OwnFunction
    Sigma_theta <- solve(Sigma_theta_inv)
@@ -873,6 +1014,15 @@ if(regime>1) {
 
       } #
       if(MA_lags==0) {
+
+        ###################################DEBUG#################################
+        debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+        debug_count <- 14
+        xtable_debug_dataframe <- xtable(debug_dataframe)
+        debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+        write.csv2(xtable_debug_dataframe, file = debug_filename)
+        #########################################################################
+
         templist <- launch_FB_Klaassen(y_AR,X_AR,regime_sn_max,theta,sigma,sn,sn_sig,P,AR_lags,MA_lags,1,taille,temper) ## OwnFunction
         sn <- templist[[1]]
       } else {
@@ -892,10 +1042,28 @@ if(regime>1) {
 
           if(regime_sn_max>1) {
             if(choix_Haas==0) {
+
+              ###################################DEBUG#################################
+              debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+              debug_count <- 15
+              xtable_debug_dataframe <- xtable(debug_dataframe)
+              debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+              write.csv2(xtable_debug_dataframe, file = debug_filename)
+              #########################################################################
+
               templist <- launch_FB_Klaassen(y_AR,X_AR,regime_sn_max,theta,sigma,sn,sn_sig,P,AR_lags,MA_lags,q,fin,temper) ## OwnFunction
               sn <- templist[[1]]
               accept <- templist[[2]]
             } else {
+
+              ###################################DEBUG#################################
+              debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+              debug_count <- 16
+              xtable_debug_dataframe <- xtable(debug_dataframe)
+              debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+              write.csv2(xtable_debug_dataframe, file = debug_filename)
+              #########################################################################
+
               templist <- Haas_FB_ARMA(y_AR,X_AR,taille,regime_sn_max,theta,sigma,sn,sn_sig,P,AR_lags,MA_lags,q,fin,temper) ## OwnFunction
               sn <- templist[[1]]
               accept <- templist[[2]]
@@ -916,6 +1084,15 @@ if(regime>1) {
       count_GRAY <- count_GRAY+1
       GRAY_MH <- GRAY_MH+1
     } #
+
+    ###################################DEBUG#################################
+    debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+    debug_count <- 17
+    xtable_debug_dataframe <- xtable(debug_dataframe)
+    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    write.csv2(xtable_debug_dataframe, file = debug_filename)
+    #########################################################################
+
     templist <- comptage(taille,sn,regime_sn_max) ## OwnFunction
     n_ii <- templist[[1]]
     d_t <- templist[[2]]
@@ -925,6 +1102,14 @@ if(regime>1) {
     } else if (sampling_sig==0) {
       sn_sig <- matrix(1,taille,1)
     } #
+
+    ###################################DEBUG#################################
+    debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+    debug_count <- 18
+    xtable_debug_dataframe <- xtable(debug_dataframe)
+    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    write.csv2(xtable_debug_dataframe, file = debug_filename)
+    #########################################################################
 
     templist <- comptage(taille,sn_sig,regime_sn_sig_max) ## OwnFunction
     n_ii_sig <- templist[[1]]
@@ -944,6 +1129,14 @@ if(regime>1) {
 
   } #
 
+ ###################################DEBUG#################################
+ debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+ debug_count <- 19
+ xtable_debug_dataframe <- xtable(debug_dataframe)
+ debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+ write.csv2(xtable_debug_dataframe, file = debug_filename)
+ #########################################################################
+
   templist <- comptage(taille,sn,regime_sn_max) ## OwnFunction
   n_ii <- templist[[1]]
   d_t <- templist[[2]]
@@ -951,6 +1144,15 @@ if(regime>1) {
   n_ii_sig <- templist[[1]]
 
   if(dependance==1) {
+
+    ###################################DEBUG#################################
+    debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+    debug_count <- 20
+    xtable_debug_dataframe <- xtable(debug_dataframe)
+    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    write.csv2(xtable_debug_dataframe, file = debug_filename)
+    #########################################################################
+
     templist <- comptage_dep(taille,sn_sig,d_t,regime_sn_sig_max,dist_sig) ## OwnFunction
     n_ii_sig_P <- templist[[1]]
     n_ii_sig_lambda <- templist[[2]]
@@ -971,10 +1173,28 @@ if(regime>1) {
                       eps_out = as.vector(eps_t, mode="double"),
                       PACKAGE="groupedtseries")$dens
 
+
+  ###################################DEBUG#################################
+  debug_dataframe <- data.frame(dens_chain = dens_chain)
+  debug_count <- 200
+  xtable_debug_dataframe <- xtable(debug_dataframe)
+  debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+  write.csv2(xtable_debug_dataframe, file = debug_filename)
+  #########################################################################
+
   ###############
   #### Sampling the variables of the IHMM structure
   ###############
   if(force_reg_1==0) {
+
+    ###################################DEBUG#################################
+    debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+    debug_count <- 21
+    xtable_debug_dataframe <- xtable(debug_dataframe)
+    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    write.csv2(xtable_debug_dataframe, file = debug_filename)
+    #########################################################################
+
     IHMM$m <- table_IHMM(IHMM,n_ii,regime_sn_max) ## OwnFunction
     IHMM$r <- overriding(IHMM,regime_sn_max,sn[1]) ## OwnFunction
     IHMM$m_bar <- considered_table(IHMM$m,IHMM$r,regime_sn_max) ## OwnFunction
@@ -992,11 +1212,29 @@ if(regime>1) {
 
     IHMM_sig$gamma <- DP_gamma(IHMM_sig$etha,IHMM_sig$m_bar,regime_sn_sig_max) ## OwnFunction
     if(dependance==1) {
+
+      ###################################DEBUG#################################
+      debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+      debug_count <- 22
+      xtable_debug_dataframe <- xtable(debug_dataframe)
+      debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+      write.csv2(xtable_debug_dataframe, file = debug_filename)
+      #########################################################################
+
       P_sig <- DP_pi_sig(IHMM_sig,regime_sn_sig_max,n_ii_sig_P) ## OwnFunction
       for (j in 1 : regime_sn_sig_max) {
         lambda[j] <- rbeta(1, IHMM_sig$alpha*IHMM_sig$gamma[j] + n_ii_sig_lambda[j,1] + IHMM_sig$kappa,IHMM_sig$alpha*(1-IHMM_sig$gamma[j]) + n_ii_sig_lambda[j,2]) ## OwnFunction
       } #
   } else {
+
+    ###################################DEBUG#################################
+    debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+    debug_count <- 23
+    xtable_debug_dataframe <- xtable(debug_dataframe)
+    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    write.csv2(xtable_debug_dataframe, file = debug_filename)
+    #########################################################################
+
     P_sig <- DP_pi_sig(IHMM_sig,regime_sn_sig_max,n_ii_sig) ## OwnFunction
   } #
 
@@ -1005,6 +1243,15 @@ if(regime>1) {
   if('random' == CP_or_MS) {
     prop_rho_a <- IHMM$prior_rho_a + rnorm(1)*adapt_rho
     if(prop_rho_a>0) {
+
+      ###################################DEBUG#################################
+      debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+      debug_count <- 24
+      xtable_debug_dataframe <- xtable(debug_dataframe)
+      debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+      write.csv2(xtable_debug_dataframe, file = debug_filename)
+      #########################################################################
+
       prior_move <- log_gampdf(prop_rho_a,IHMM$hier_rho_a,IHMM$hier_rho_b) ## OwnFunction
       prior_stay <- log_gampdf(IHMM$prior_rho_a,IHMM$hier_rho_a,IHMM$hier_rho_b) ## OwnFunction
       alpha_move <- cbind(prop_rho_a, IHMM$prior_rho_b)
@@ -1137,7 +1384,7 @@ if(regime>1) {
         etat <- multinomialrnd(P_new[etat,]) #OwnFunction
         if(sampling_sig==1) {
           d_t_for <- (d_t_for+1)*(etat_prev==etat) + 1*(etat_prev!=etat)
-          if(dependance==1 && d_t_for<dist_sig) {
+          if((dependance==1) && (d_t_for<dist_sig)) {
             etat_sig <- multinomialrnd(p_lambda[etat_sig,]) ## OwnFunction
           } else {
             etat_sig <- multinomialrnd(P_sig[etat_sig,]) ## OwnFunction
@@ -1325,12 +1572,29 @@ if(regime>1) {
     # subplot(3,3,9),plot(result$dens_chain),title('Density')
   } #
   if(Rolling_MCMC==0) {
-    nb_reg <- apply(result$post_regime, 1, function(x) as.numeric(names(which.max(table(x)))))
+    nb_reg <- apply(result$post_regime, 2, function(x) as.numeric(names(which.max(table(x)))))
     N <- max(dim(post_regime))
     sn_mode <- matrix(0,taille,2)
     max_dens <- 0
+
+    ###################################DEBUG#################################
+    debug_dataframe <- data.frame(post_regime = result$post_regime)
+    debug_count <- 25
+    xtable_debug_dataframe <- xtable(debug_dataframe)
+    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    write.csv2(xtable_debug_dataframe, file = debug_filename)
+    #########################################################################
+
+    ###################################DEBUG#################################
+    debug_dataframe <- data.frame(nb_reg = nb_reg, N = N, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+    debug_count <- 26
+    xtable_debug_dataframe <- xtable(debug_dataframe)
+    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    write.csv2(xtable_debug_dataframe, file = debug_filename)
+    #########################################################################
+
     for (i in 1 : N) {
-      if(post_regime[i,1]==nb_reg[1] && post_regime[i,2]==nb_reg[2]) {
+      if((post_regime[i,1]==nb_reg[1]) && (post_regime[i,2]==nb_reg[2])) {
         if(max_dens==0) {
           sn_mode[,1] <- post_sn[,i]
           sn_mode[,2] <- post_sn_sig[,i]
@@ -1377,6 +1641,7 @@ if(regime>1) {
   result$dependance <- dependance
   result$dist_sig <- dist_sig
 
+  return(result)
 
   if(nb_MCMC>50) {
     #result <- label_bivar_kmean(result,display_graph) ## OwnFunction
