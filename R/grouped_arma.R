@@ -151,38 +151,6 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
     return(coef)
   }
 
-  index.segments <- function() {
-
-    index_start_segment <- c(1,1+which(diff(x[,2])!=0))
-    index_end_segment <- c(index_start_segment[-1] - 1, nrow(x))
-
-    index_na <- which(is.na(x[,1]))
-    index_end_na <- index_na - 1
-    index_start_na <- index_na + 1
-
-    #cancel all entries of consecutive na's
-    index_end_na <- index_end_na[!index_end_na %in% index_na]
-    index_start_na <- index_start_na[!index_start_na %in% index_na]
-
-    #delete indizes if they are out of bound
-    if (max(index_start_na) > nrow(x))
-      index_start_na <- index_start_na[-which(index_start_na > nrow(x))]
-    if (min(index_end_na) < 1)
-      index_end_na <- index_end_na[-which(index_end_na < 1)]
-
-    #cancel all entries for start/end patient where overlapping with na
-    index_end_segment <- index_end_segment[!index_end_segment %in% index_na]
-    index_start_segment <- index_start_segment[!index_start_segment %in% index_na]
-
-    #concat index vectors and delete duplicates
-    index_start <- unique(sort(c(index_start_na, index_start_segment)))
-    index_end <- unique(sort(c(index_end_na, index_end_segment)))
-
-    ts_segments <- data.frame(cbind(index_start, index_end, index_end - index_start + 1))
-    colnames(ts_segments) <- c("index_start", "index_end", "length")
-
-    return(ts_segments)
-  }
 
   if (!is.null(order) && !is.null(lag))
     warning("order is ignored")
@@ -207,7 +175,7 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
   } else if (NCOL(x) == 1){
     ts_segments <- data.frame(index_start = 1, index_end = n, length = n)
   } else {
-    ts_segments <- index.segments()
+    ts_segments <- index_segments(x)
   }
 
   if (is.null(series))

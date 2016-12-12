@@ -93,8 +93,8 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
         }
 
         if((*MA_lags)>0) {
-            eps_reg = eps_reg + val_prev*theta[index+(*AR_lags)+1+z];
-            //printf(" theta MA = %f ", theta[index+(*AR_lags)+1+z]);
+            eps_reg = eps_reg + val_prev*theta[index+(*AR_lags)+1];
+            //printf(" theta MA = %f ", theta[index+(*AR_lags)+1]);
             for(z=(*MA_lags)-1;z>0;z--) {
                 if(t-z-1>=0) {
                     i = (int) sn_current[t-z-1];

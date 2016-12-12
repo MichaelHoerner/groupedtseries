@@ -19,29 +19,29 @@ X_MA <- matrix(0, nrow=(fin+1), ncol=regime)
 
 if(lags_q == 1) {
 
-    ###################################DEBUG#################################
-    debug_dataframe <- data.frame(X_AR = X, Regime = regime)
-    debug_count <- 120
-    xtable_debug_dataframe <- xtable(debug_dataframe)
-    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
-    write.csv2(xtable_debug_dataframe, file = debug_filename)
-    #########################################################################
-
-    ###################################DEBUG#################################
-    debug_dataframe <- data.frame(theta = theta)
-    debug_count <- 121
-    xtable_debug_dataframe <- xtable(debug_dataframe)
-    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
-    write.csv2(xtable_debug_dataframe, file = debug_filename)
-    #########################################################################
-
-    ###################################DEBUG#################################
-    debug_dataframe <- data.frame(sn = sn)
-    debug_count <- 1201
-    xtable_debug_dataframe <- xtable(debug_dataframe)
-    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
-    write.csv2(xtable_debug_dataframe, file = debug_filename)
-    #########################################################################
+    # ###################################DEBUG#################################
+    # debug_dataframe <- data.frame(X_AR = X, Regime = regime)
+    # debug_count <- 120
+    # xtable_debug_dataframe <- xtable(debug_dataframe)
+    # debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    # write.csv2(xtable_debug_dataframe, file = debug_filename)
+    # #########################################################################
+    #
+    # ###################################DEBUG#################################
+    # debug_dataframe <- data.frame(theta = theta)
+    # debug_count <- 121
+    # xtable_debug_dataframe <- xtable(debug_dataframe)
+    # debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    # write.csv2(xtable_debug_dataframe, file = debug_filename)
+    # #########################################################################
+    #
+    # ###################################DEBUG#################################
+    # debug_dataframe <- data.frame(sn = sn)
+    # debug_count <- 1201
+    # xtable_debug_dataframe <- xtable(debug_dataframe)
+    # debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    # write.csv2(xtable_debug_dataframe, file = debug_filename)
+    # #########################################################################
 
 
 
@@ -75,29 +75,29 @@ if(lags_q == 1) {
     X_MA <- templist$epsilon_Haas
     X_MA <- matrix(X_MA, nrow = (fin+1), ncol = regime)
 
-    ###################################DEBUG#################################
-    debug_dataframe <- data.frame(log_q_prior = log_q_prior)
-    debug_count <- 122
-    xtable_debug_dataframe <- xtable(debug_dataframe)
-    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
-    write.csv2(xtable_debug_dataframe, file = debug_filename)
-    #########################################################################
-
-    ###################################DEBUG#################################
-    debug_dataframe <- data.frame(forward_out = forward_out)
-    debug_count <- 123
-    xtable_debug_dataframe <- xtable(debug_dataframe)
-    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
-    write.csv2(xtable_debug_dataframe, file = debug_filename)
-    #########################################################################
-
-    ###################################DEBUG#################################
-    debug_dataframe <- data.frame(X_MA = X_MA)
-    debug_count <- 124
-    xtable_debug_dataframe <- xtable(debug_dataframe)
-    debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
-    write.csv2(xtable_debug_dataframe, file = debug_filename)
-    #########################################################################
+    # ###################################DEBUG#################################
+    # debug_dataframe <- data.frame(log_q_prior = log_q_prior)
+    # debug_count <- 122
+    # xtable_debug_dataframe <- xtable(debug_dataframe)
+    # debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    # write.csv2(xtable_debug_dataframe, file = debug_filename)
+    # #########################################################################
+    #
+    # ###################################DEBUG#################################
+    # debug_dataframe <- data.frame(forward_out = forward_out)
+    # debug_count <- 123
+    # xtable_debug_dataframe <- xtable(debug_dataframe)
+    # debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    # write.csv2(xtable_debug_dataframe, file = debug_filename)
+    # #########################################################################
+    #
+    # ###################################DEBUG#################################
+    # debug_dataframe <- data.frame(X_MA = X_MA)
+    # debug_count <- 124
+    # xtable_debug_dataframe <- xtable(debug_dataframe)
+    # debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+    # write.csv2(xtable_debug_dataframe, file = debug_filename)
+    # #########################################################################
 
     } else {
     # templist <- FB_Maciej(y,regime,sigma_t,p_mat,X,theta,sn-1,AR_lags,MA_lags,deb,fin,1,rand[fin-deb+1,1],temper,lags_q)
@@ -142,10 +142,14 @@ if(MA_lags==0) {
                     eps_out = as.vector(eps_t, mode="double"),
                     PACKAGE="groupedtseries")$dens
 
+  if (any(is.na(log_q_prior)) || any(is.infinite(log_q_prior))){
+    warning("log_q_prior shows an na- or infinite-value")
+  } else {
     if(exp(temper*(dens_move-dens_stay)+log_q_prior[2]+log_q_prior[3]-log_q_prior[1]-log_q_prior[4])>runif(1, 0, 1) ) {
         sn <- sn_move
         accept <- 1
-       } #
+       }
+    }#
    } #
 
 returnlist <- list(sn, accept, forward_out, X_MA)

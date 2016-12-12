@@ -4,9 +4,12 @@
 #' @export
 
 
-PSO_ARMA_sn <-function( y,X,regime_max,regime_sig_max,AR_lags,MA_lags,sn,sn_sig,nb_iter,nb_part ) {
+PSO_ARMA_sn <-function( y,X,regime_max,regime_sig_max,AR_lags,MA_lags,sn,sn_sig,nb_iter,nb_part, ts_segments) {
+
+
 dimension <- dim(as.data.frame(y))
 taille <- dimension[1]
+number_ts_segments <- nrow(ts_segments)
 
 sn <- as.matrix(sn)
 sn_sig <- as.matrix(sn_sig)
@@ -54,6 +57,8 @@ Sigma_theta <- diag(1,taille_ARMA)*0.25
 best_dens <- 0
 a <- 1.5
 b <- 1.5
+
+
 for (  i in 1 : nb_iter ) {
     w <- 0.9-0.7*(i/nb_iter)
     for (  j in 1 : nb_part ) {
@@ -126,6 +131,10 @@ for (  i in 1 : nb_iter ) {
                  as.vector(sn_sig, mode = "double"),
                  as.integer(1),
                  as.integer(taille),
+                 as.integer(number_ts_segments),
+                 as.vector(ts_segments$index_AR_start, mode="integer"),
+                 as.vector(ts_segments$index_AR_end, mode="integer"),
+                 as.vector(ts_segments$length_AR, mode="integer"),
                  dens = as.double(dens),
                  eps_out = as.vector(eps_t, mode="double"),
                  PACKAGE="groupedtseries")$dens
@@ -145,6 +154,10 @@ for (  i in 1 : nb_iter ) {
                                  as.vector(sn_sig[,z], mode = "double"),
                                  as.integer(1),
                                  as.integer(taille),
+                                 as.integer(number_ts_segments),
+                                 as.vector(ts_segments$index_AR_start, mode="integer"),
+                                 as.vector(ts_segments$index_AR_end, mode="integer"),
+                                 as.vector(ts_segments$length_AR, mode="integer"),
                                  dens = as.double(dens),
                                  eps_out = as.vector(eps_t, mode="double"),
                                  PACKAGE="groupedtseries")$dens
@@ -216,6 +229,10 @@ for (  i in 1 : nb_iter ) {
                              as.vector(sn_sig, mode = "double"),
                              as.integer(1),
                              as.integer(taille),
+                             as.integer(number_ts_segments),
+                             as.vector(ts_segments$index_AR_start, mode="integer"),
+                             as.vector(ts_segments$index_AR_end, mode="integer"),
+                             as.vector(ts_segments$length_AR, mode="integer"),
                              dens = as.double(dens),
                              eps_out = as.vector(eps_t, mode="double"),
                              PACKAGE="groupedtseries")$dens
@@ -234,6 +251,10 @@ for (  i in 1 : nb_iter ) {
                                        as.vector(sn_sig[,z], mode = "double"),
                                        as.integer(1),
                                        as.integer(taille),
+                                       as.integer(number_ts_segments),
+                                       as.vector(ts_segments$index_AR_start, mode="integer"),
+                                       as.vector(ts_segments$index_AR_end, mode="integer"),
+                                       as.vector(ts_segments$length_AR, mode="integer"),
                                        dens = as.double(dens),
                                        eps_out = as.vector(eps_t, mode="double"),
                                        PACKAGE="groupedtseries")$dens

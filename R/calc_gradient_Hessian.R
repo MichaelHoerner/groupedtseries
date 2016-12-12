@@ -4,11 +4,13 @@
 #' @export
 
 
-calc_gradient_Hessian <-function( y,X,theta,sigma,sn,sn_sig,regime,AR_lags,MA_lags,inv_Sig_prior,temper ) {
+calc_gradient_Hessian <-function( y,X,theta,sigma,sn,sn_sig,regime,AR_lags,MA_lags,inv_Sig_prior,temper, ts_segments) {
 
-if(MA_lags>1 || AR_lags==0) {
-    error["sMALA does not work for a number of error lags greater than 1" ]
-} else {
+  number_ts_segments <- nrow(ts_segments)
+
+##if(MA_lags>1 || AR_lags==0) {
+##    warning("sMALA does not work for a number of error lags greater than 1")
+##} else {
   taille <- max( dim( as.data.frame(y)))
     dens <- 0
     eps_t <- double(length=taille)
@@ -23,6 +25,10 @@ if(MA_lags>1 || AR_lags==0) {
                   as.vector(sn_sig, mode = "double"),
                   as.integer(1),
                   as.integer(taille),
+                  as.integer(number_ts_segments),
+                  as.vector(ts_segments$index_AR_start, mode="integer"),
+                  as.vector(ts_segments$index_AR_end, mode="integer"),
+                  as.vector(ts_segments$length_AR, mode="integer"),
                   dens = as.double(dens),
                   eps_out = as.vector(eps_t),
                   PACKAGE="groupedtseries")$eps_out
@@ -65,7 +71,7 @@ if(MA_lags>1 || AR_lags==0) {
     mat_prior <- kronecker(diag(1,regime),inv_Sig_prior)
     gradient <- as.matrix(colSums(Jacobien)) + mat_prior%*%theta[1:(taille_ARMA*regime)]
     Hessian_approx <- t(aide_Hessian)%*%aide_Hessian + mat_prior
-   } #
+##   } #
 
    returnlist <- list(gradient, Hessian_approx, Jacobien)
    return(returnlist)
