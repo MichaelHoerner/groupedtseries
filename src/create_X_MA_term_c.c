@@ -23,13 +23,15 @@
  *[log_dens] = dens_CP_ARMA_c++(y,X,AR_lags,MA_lags,theta,sigma,tau)
  */
 
-void create_X_MA_term_c(double *y, double *X, int *AR_lags, int *MA_lags, double *theta, double *sn, int *taille, double *err_out, double *X_out)
+void create_X_MA_term_c(double *y, double *X, int *AR_lags, int *MA_lags, double *theta, double *sn, int *taille,
+                        int *number_ts_segments, int *seg_start_index,
+                        int *seg_end_index, int *seg_length, double *err_out, double *X_out)
 {
 
 //declare variables
     double *log_like,*err;//,*AR_lags,*MA_lags;
     int dimx, dimy, numdims;
-    int i,q,z,iter,etat,index,ind_mu,taille_ARMA;
+    int i,q,z,iter,etat,index,ind_mu,taille_ARMA, seg;
     double pi,eps,eps_sq;
 
 
@@ -73,85 +75,88 @@ void create_X_MA_term_c(double *y, double *X, int *AR_lags, int *MA_lags, double
 
     pi = 3.14159265;
 
-    etat = sn[0]-1;
-    index = (etat)*taille_ARMA;
 
-        eps = 0;
-        for(q=0;q<taille_ARMA;q++)
-        {
-          eps = eps + X[q*(*taille)+0]*theta[index+q];
-          X_out[q*(*taille)+0] = X[q*(*taille)+0];
-        }
-        eps = y[0]-eps;
-        err_out[0] = eps;
-        if(MA_lags>0)
-        {
-            X[(1+(*AR_lags))*(*taille)+1] = eps;
-            X_out[(1+(*AR_lags))*(*taille)+1] = eps;
-        }
+    for (seg=0; seg < (*number_ts_segments); seg++) {
+      etat = sn[seg_start_index[seg]-1]-1;
+      index = (etat)*taille_ARMA;
 
-    //     mexPrintf("log_dens = %f\n",log_dens);
-//             mexPrintf("theta[%d] = %f\n",0,theta[0]);
-//             mexPrintf("theta[%d] = %f\n",1,theta[1]);
-//             mexPrintf("theta[%d] = %f\n",2,theta[2]);
-//             mexPrintf("theta[%d] = %f\n",3,theta[3]);
-// //            mexPrintf("sigma_sq[%d] = %f\n",0,sigma_sq[0]);
-//            mexPrintf("eps = %f\n",eps);
-//            mexPrintf("y = %f\n",y[0]);
-// //           mexPrintf("mu = %f\n",mu[ind-1]);
-//            mexPrintf("log_dens = %f\n",log_dens);
-//          system("pause");
+          eps = 0;
+          for(q=0;q<taille_ARMA;q++)
+          {
+            eps = eps + X[q*(*taille)+seg_start_index[seg]-1]*theta[index+q];
+            X_out[q*(*taille)+seg_start_index[seg]-1] = X[q*(*taille)+seg_start_index[seg]-1];
+          }
+          eps = y[seg_start_index[seg]-1]-eps;
+          err_out[seg_start_index[seg]-1] = eps;
+          if(MA_lags>0)
+          {
+              X[(1+(*AR_lags))*(*taille)+1 +seg_start_index[seg]-1] = eps;
+              X_out[(1+(*AR_lags))*(*taille)+1 +seg_start_index[seg]-1] = eps;
+          }
 
-    //do something
-        for(i=1;i<(*taille);i++)
-        {
-            etat = sn[i]-1;
-            index = (etat)*taille_ARMA;
+      //     mexPrintf("log_dens = %f\n",log_dens);
+  //             mexPrintf("theta[%d] = %f\n",0,theta[0]);
+  //             mexPrintf("theta[%d] = %f\n",1,theta[1]);
+  //             mexPrintf("theta[%d] = %f\n",2,theta[2]);
+  //             mexPrintf("theta[%d] = %f\n",3,theta[3]);
+  // //            mexPrintf("sigma_sq[%d] = %f\n",0,sigma_sq[0]);
+  //            mexPrintf("eps = %f\n",eps);
+  //            mexPrintf("y = %f\n",y[0]);
+  // //           mexPrintf("mu = %f\n",mu[ind-1]);
+  //            mexPrintf("log_dens = %f\n",log_dens);
+  //          system("pause");
+
+      //do something
+          for(i=1;i<(seg_length[seg]);i++)
+          {
+              etat = sn[seg_start_index[seg]-1+i]-1;
+              index = (etat)*taille_ARMA;
 
 
-            eps = 0;
-            for(q=0;q<taille_ARMA;q++) {
-                eps = eps + X[q*(*taille)+i]*theta[index+q];
-                X_out[q*(*taille)+i] = X[q*(*taille)+i];
-            }
-            eps = y[i]-eps;
-            if((*MA_lags)>0)
-            {
-                if(i+1<(*taille))
-                {
-                    X[(1+(*AR_lags))*(*taille)+i+1] = eps;
-                    if((*MA_lags)>1)
-                    {
-                      if(i+1<(*MA_lags))
+              eps = 0;
+              for(q=0;q<taille_ARMA;q++) {
+                  eps = eps + X[q*(*taille)+seg_start_index[seg]-1+i]*theta[index+q];
+                  X_out[q*(*taille)+seg_start_index[seg]-1+i] = X[q*(*taille)+seg_start_index[seg]-1+i];
+              }
+              eps = y[seg_start_index[seg]-1+i]-eps;
+              if((*MA_lags)>0)
+              {
+                  if(i+1<(seg_length[seg]))
+                  {
+                      X[(1+(*AR_lags))*(*taille)+seg_start_index[seg]-1+i+1] = eps;
+                      if((*MA_lags)>1)
                       {
-                          iter = i;
+                        if(i+1<(*MA_lags))
+                        {
+                            iter = i;
+                        }
+                        else
+                        {
+                            iter = (*MA_lags)-1;
+                        }
+                        for(z=0;z<iter;z++)
+                        {
+                            X[(1+(*AR_lags)+1+z)*(*taille)+seg_start_index[seg]-1+i+1] = X[(1+(*AR_lags))*(*taille)+seg_start_index[seg]-1+i-z];
+                        }
                       }
-                      else
-                      {
-                          iter = (*MA_lags)-1;
-                      }
-                      for(z=0;z<iter;z++)
-                      {
-                          X[(1+(*AR_lags)+1+z)*(*taille)+i+1] = X[(1+(*AR_lags))*(*taille)+i-z];
-                      }
-                    }
-                }
-            }
-            err_out[i] = eps;
+                  }
+              }
+              err_out[seg_start_index[seg]-1+i] = eps;
 
 
 
-//             if(sigma_sq[i]<0)
-//             {
-//                 mexPrintf("sigma[%d] = %f\n",i,sigma_sq[i]);
-//             mexPrintf("log_dens[%d] = %f\n",i,log_dens);
-//             mexPrintf("log_dens[%d] = %d\n",i,index);
-//             mexPrintf("theta[%d] = %f\n",index+0,theta[index+0]);
-//             mexPrintf("theta[%d] = %f\n",index+1,theta[index+1]);
-//             mexPrintf("theta[%d] = %f\n",index+2,theta[index+2]);
-//             mexPrintf("theta[%d] = %f\n",index+3,theta[index+3]);
-//             }
-        }
+  //             if(sigma_sq[i]<0)
+  //             {
+  //                 mexPrintf("sigma[%d] = %f\n",i,sigma_sq[i]);
+  //             mexPrintf("log_dens[%d] = %f\n",i,log_dens);
+  //             mexPrintf("log_dens[%d] = %d\n",i,index);
+  //             mexPrintf("theta[%d] = %f\n",index+0,theta[index+0]);
+  //             mexPrintf("theta[%d] = %f\n",index+1,theta[index+1]);
+  //             mexPrintf("theta[%d] = %f\n",index+2,theta[index+2]);
+  //             mexPrintf("theta[%d] = %f\n",index+3,theta[index+3]);
+  //             }
+          }
+    }
 
 
     return;

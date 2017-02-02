@@ -3,7 +3,9 @@
 #' @importFrom stats is.ts as.ts
 #' @export
 
-launch_FB_sigma <-function( y,X,taille,regime_sig,theta,sigma,sn,sn_sig,p_sig,AR_lags,MA_lags,temper,dependance,d_t,dist_in,lambda ) {
+launch_FB_sigma <-function( y,X,taille,regime_sig,theta,sigma,sn,sn_sig,p_sig,AR_lags,MA_lags,temper,dependance,d_t,dist_in,lambda, ts_segments) {
+
+number_ts_segments <- nrow(ts_segments)
 
 eps_t <- double(length=taille)
 dens <- 0
@@ -18,6 +20,10 @@ eps_t <- .C("dens_CP_ARMA_c",
               as.vector(sn_sig, mode = "double"),
               as.integer(1),
               as.integer(taille),
+              as.integer(number_ts_segments),
+              as.vector(ts_segments$index_AR_start, mode="integer"),
+              as.vector(ts_segments$index_AR_end, mode="integer"),
+              as.vector(ts_segments$length_AR, mode="integer"),
               dens = as.double(dens),
               eps_out = as.vector(eps_t, mode="double"),
               PACKAGE="groupedtseries")$eps_out
@@ -48,6 +54,10 @@ templist <- .C("FB_sigma",
                as.double(dist_in),
                as.double(p_lambda, mode="double"),
                as.integer(taille),
+               as.integer(number_ts_segments),
+               as.vector(ts_segments$index_AR_start, mode="integer"),
+               as.vector(ts_segments$index_AR_end, mode="integer"),
+               as.vector(ts_segments$length_AR, mode="integer"),
                sn_move = as.vector(sn_move, mode="double"),
                log_like_out = as.double(log_like),
                forward_out = as.vector(forward_out, mode="double"),

@@ -5,7 +5,7 @@
 
 
 
-index_segments <- function(x) {
+index_segments <- function(x, max_order) {
 
   if (length(unique(x[,2])) == 1) {
     index_start_segment <- 1
@@ -54,8 +54,18 @@ index_segments <- function(x) {
     }
   }
 
-  ts_segments <- data.frame(cbind(index_start, index_end, index_start_wo_na, index_end_wo_na, index_end - index_start + 1))
-  colnames(ts_segments) <- c("index_start", "index_end", "index_start_wo_na", "index_end_wo_na", "length")
+  #create list of patient IDs
+  patient_ids <- x[index_start,2]
+
+  ts_segments <-
+    data.frame(cbind(index_start, index_end, index_start_wo_na, index_end_wo_na, index_end - index_start + 1, patient_ids))
+  colnames(ts_segments) <- c("index_start", "index_end", "index_start_wo_na", "index_end_wo_na", "length", "patient_ID")
+
+  del_index <- which(ts_segments$length <= (max_order+8))
+  if (length(del_index)>0) {
+    ts_segments <- ts_segments[-del_index,]
+  }
+
 
   return(ts_segments)
 

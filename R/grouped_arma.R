@@ -60,6 +60,8 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
   #target function
   err <- function(coef) {
     u <- double(n)
+    r_squared_term <- 0
+
     for (i in 1:n_segments){
 
       u_temp <- double(ts_segments$length[i])
@@ -73,7 +75,8 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
                      as.integer(lag$ma), as.integer(ar.l), as.integer(ma.l),
                      as.integer(max.order), as.integer(ts_segments$length[i]),
                      as.integer(include.intercept),
-                     PACKAGE = "tseries")$u
+                     PACKAGE = "groupedtseries")$u
+
       } else {
 
         u_temp[1:length(u_temp)] <- 0
@@ -82,9 +85,30 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
 
       u[ts_segments$index_start[i]:ts_segments$index_end[i]] <- u_temp
 
+      #Alternative - return minimum compound R2
+      if (length(unique(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]]))==1) {
+        r_squared_term <-
+          r_squared_term + (ts_segments$length[i]-max.order)*sum((u_temp)^2) /
+          sum((x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]] - mean(na.remove(x)))^2)
+
+        # print(paste0("r_squared_term above: ", r_squared_term))
+
+      } else {
+        r_squared_term <-
+          r_squared_term + (ts_segments$length[i]-max.order)*sum((u_temp)^2) /
+          sum((x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]]-mean(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]]))^2)
+
+        # print(paste0("r_squared_term below: ", r_squared_term))
+        # print(paste0("mean : ", mean(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]])))
+      }
+
     }
     #return of squared error - to be minimized in optimization
-    return(sum(u^2))
+    #return(sum(u^2))
+
+    #Alternative - return minimum compound R2
+    return(r_squared_term)
+
   }
 
   #return residual error
@@ -97,6 +121,9 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
 
       if (ts_segments$length[i] > max.order) {
 
+        #print(paste0("x ", x[ts_segments$index_start[i]:ts_segments$index_end[i]]))
+        #print(paste0("coef ", coef))
+
         u_temp[seqN(max.order)] <- 0
         u_temp <- .C("arma", as.vector(x[ts_segments$index_start[i]:ts_segments$index_end[i]],
                                        mode = "double"), u = as.vector(u_temp),
@@ -104,7 +131,7 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
                      as.integer(lag$ma), as.integer(ar.l), as.integer(ma.l),
                      as.integer(max.order), as.integer(ts_segments$length[i]),
                      as.integer(include.intercept),
-                     PACKAGE = "tseries")$u
+                     PACKAGE = "groupedtseries")$u
 
         u_temp[seqN(max.order)] <- NA
 
@@ -175,7 +202,7 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
   } else if (NCOL(x) == 1){
     ts_segments <- data.frame(index_start = 1, index_end = n, length = n)
   } else {
-    ts_segments <- index_segments(x)
+    ts_segments <- index_segments(x, max.order)
   }
 
   if (is.null(series))
@@ -200,9 +227,14 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
   ncoef <- length(unlist(lag)) + as.numeric(include.intercept)
 
   if (is.null(coef)) {
-    if (!is.null(unlist(lag)))
+    if (!is.null(unlist(lag))) {
       coef <- arma.init()
-    else coef <- 0
+
+    #prevent NA values in coef
+      coef[which(is.na(coef))] <- 0
+    } else {
+      coef <- 0
+    }
   }
 
   if (length(coef) != ncoef)

@@ -135,8 +135,10 @@ if(dependance==1) {
 
 y <- as.data.frame(y)
 
+max_order <- max(AR_lags, MA_lags)
+
 #create index for grouped timeseries
-ts_segments <- index_segments(y)
+ts_segments <- index_segments(y, max_order)
 number_ts_segments <- nrow(ts_segments)
 
 
@@ -149,20 +151,20 @@ if(seed_id==1) {
     runif(100,0,1) ##ok<RAND>
    } #
 
-###### test issues
-Expl_X<-NULL
-nb_MCMC<-10
-regime<-2
-AR_lags<-2
-MA_lags<-1
-CP_or_MS<-"MS"
-temper<-1
-force_reg_1<-0
-sn_dep<-NULL
-sn_sig_dep<-NULL
-theta_dep<-NULL
-sigma_dep<-NULL
-###################
+# ###### test issues
+# Expl_X<-NULL
+# nb_MCMC<-10
+# regime<-2
+# AR_lags<-2
+# MA_lags<-1
+# CP_or_MS<-"MS"
+# temper<-1
+# force_reg_1<-0
+# sn_dep<-NULL
+# sn_sig_dep<-NULL
+# theta_dep<-NULL
+# sigma_dep<-NULL
+# ###################
 
 
 
@@ -305,8 +307,8 @@ if(regime>1) {
     nb_init <- 10 ###change value: 10
   } #
 } #
- regime_sn_max <- 20 ## Maximum number of regimes in the mean
- regime_sn_sig_max <- 20 ## Maximum number of regimes in the variance
+ regime_sn_max <- 6 ## Maximum number of regimes in the mean #changed value - was 20 before
+ regime_sn_sig_max <- 6 ## Maximum number of regimes in the variance #changed value - was 20 before
 
  ###################################DEBUG#################################
  if (activate_debug == 1) {
@@ -350,7 +352,7 @@ if(regime>1) {
                       as.vector(sigma_dep, mode = "double"),
                       as.vector(sn_dep, mode = "double"),
                       as.vector(sn_sig, mode = "double"),
-                      as.integer(sn_sig_dep),
+                      as.integer(1),   #change value - here was sn_sig_dep
                       as.integer(taille),
                       as.integer(number_ts_segments),
                       as.vector(ts_segments$index_AR_start, mode="integer"),
@@ -414,7 +416,7 @@ if(regime>1) {
         }
         #########################################################################
         #### change value - 3rd// nb_MCMC - 30
-        res_dep <- MS_ARMA_MCMC(y,Expl_X,30,regime,AR_lags,MA_lags,CP_or_MS,temper,0,init_sn[,i],init_sn_sig[,i]) ## OwnFunction
+        res_dep <- MS_ARMA_MCMC(y,Expl_X,10,regime,AR_lags,MA_lags,CP_or_MS,temper,0,init_sn[,i],init_sn_sig[,i]) ## OwnFunction
         maxi <- max(res_dep$post_dens)
         ind <- which.max(res_dep$post_dens)
         init_reg[i,] <- res_dep$post_regime[ind,]
@@ -454,9 +456,9 @@ if(regime>1) {
       write.csv2(xtable_debug_dataframe, file = debug_filename)
       }
       #########################################################################
-
+    print("PSO in")
     templist <- PSO_ARMA_sn(y_AR,X_AR,regime_sn_max,regime_sn_sig_max,AR_lags,MA_lags,sn_dep,sn_sig_dep,nb_iter,nb_part, ts_segments) ## OwnFunction
-
+    print("PSO out")
     dens_chain[1] <- templist[[1]]
     theta <- templist[[2]]
     sigma <- templist [[3]]
@@ -580,13 +582,13 @@ if(regime>1) {
       test <- 1
       if(AR_lags>0) {
         root_AR <- polyroot(rev(c(1, -t(theta_prop[2:(1+AR_lags)])))) ## OwnFunction ## MatlabFunction ## Check if complex numbers are allowed
-        if(sum(abs(Re(root_AR))>=1)!=0) { ## MatlabFunction
+        if(sum(abs(Re(root_AR))>=1)!=0 || any(abs(theta_prop[2:(1+AR_lags)])>=1)) { ## MatlabFunction
           test <- 0
         }
       } #
       if(MA_lags>0) {
         root_MA <- polyroot(rev(c(1, -t(theta_prop[(2+AR_lags):taille_ARMA]))))
-        if(sum(abs(Re(root_MA))>=1)!=0) {
+        if(sum(abs(Re(root_MA))>=1)!=0 || any(abs(theta_prop[(2+AR_lags):taille_ARMA])>=1)) {
           test <- 0
         } #
       } #
@@ -783,9 +785,9 @@ if(regime>1) {
  i <- 1
  while(i<=nb_MCMC) {
   #progressbar(i/nb_MCMC)
-  if(i%%500==0) {
+  if(i%%5==0) {
 
-
+    print(i)
     #disp('********************************************************************')
     #disp('********************************************************************')
     #disp(['************* TEMPERING : ' num2str(temper) ' ******'])
@@ -942,13 +944,13 @@ if(regime>1) {
         ind <- (q-1)*taille_ARMA
         if(AR_lags>0) {
           root_AR <- polyroot(rev(c(1, -t(theta_prop[(ind+2):(ind+1+AR_lags)]))))
-          if(sum(abs(Re(root_AR))>=1)!=0) {
+          if(sum(abs(Re(root_AR))>=1)!=0 || any(abs(theta_prop[(ind+2):(ind+1+AR_lags)])>=1)) {
             test <- 0
           } #
         } #
         if(MA_lags>0) {
           root_MA <- polyroot(rev(c(1, -t(theta_prop[(ind+2+AR_lags):(ind+taille_ARMA)]))))
-          if(sum(abs(Re(root_MA))>=1)!=0){
+          if(sum(abs(Re(root_MA))>=1)!=0 || any(abs(theta_prop[(ind+2+AR_lags):(ind + taille_ARMA)])>=1)){
             test <- 0
           } #
         } #
@@ -997,7 +999,7 @@ if(regime>1) {
         }
         #########################################################################
 
-       templist <- calc_gradient_Hessian(y_AR,X_AR,theta_prop,sigma,sn,sn_sig,regime,AR_lags,MA_lags,inv_Sig_prior,temper) ## OwnFunction
+       templist <- calc_gradient_Hessian(y_AR,X_AR,theta_prop,sigma,sn,sn_sig,regime,AR_lags,MA_lags,inv_Sig_prior,temper,ts_segments) ## OwnFunction
         gradient_stay <- templist[[1]]
         Hessian_approx_stay <- templist[[2]]
 
@@ -1019,7 +1021,7 @@ if(regime>1) {
          # debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
          # write.csv2(xtable_debug_dataframe, file = debug_filename)
          # #########################################################################
-         print(i)
+         #print(i)
           inv_C <- matrix(1,fin-z+1, fin-z+1)
           dens_move <- NA
          #return(Hessian_approx_stay[z:fin,z:fin])
@@ -1116,7 +1118,7 @@ if(regime>1) {
       while((test==0) && (count<nb_max_count)) {
         theta_prop <- as.matrix(mvrnorm(1,mu,Sigma)) ## Tirage dans la distribution conditionelle ## MatlabFunction
         root_AR <- polyroot(rev(c(1, -t(theta_prop[2:taille_ARMA]))))
-        if(sum(abs(Re(root_AR))>=1)==0) {
+        if(sum(abs(Re(root_AR))>=1)==0 && sum(abs(theta_prop[2:taille_ARMA])>=1)==0) {
           test <- 1
         } #
       } #
@@ -1141,13 +1143,13 @@ if(regime>1) {
     test <- 1
     if(AR_lags>0) {
       root_AR <- polyroot(rev(c(1, -t(theta_prop[2:(1+AR_lags)]))))
-      if(sum(abs(Re(root_AR))>=1)!=0){
+      if(sum(abs(Re(root_AR))>=1)!=0 || any(abs(theta_prop[2:(1+AR_lags)])>=1)){
         test <- 0
       } #
     } #
     if(MA_lags>0) {
       root_MA <- polyroot(rev(c(1, -t(theta_prop[(2+AR_lags):taille_ARMA]))))
-      if(sum(abs(Re(root_MA))>=1)!=0){
+      if(sum(abs(Re(root_MA))>=1)!=0 || any(abs(theta_prop[(2+AR_lags):taille_ARMA])>=1)){
         test <- 0
       } #
     } #
@@ -1294,6 +1296,10 @@ if(regime>1) {
                    as.vector(theta, mode = "double"),
                    as.vector(sn, mode = "double"),
                    as.integer(taille),
+                   as.integer(number_ts_segments),
+                   as.vector(ts_segments$index_AR_start, mode="integer"),
+                   as.vector(ts_segments$index_AR_end, mode="integer"),
+                   as.vector(ts_segments$length_AR, mode="integer"),
                    err_out = as.vector(err_out, mode="double"),
                    X_out = as.vector(X_out, mode="double"),
                    PACKAGE="groupedtseries")$X_out
@@ -1311,68 +1317,101 @@ if(regime>1) {
         write.csv2(xtable_debug_dataframe, file = debug_filename)
         }
         #########################################################################
+        for (seg in 1:number_ts_segments){
+          templist <-
+            launch_FB_Klaassen(y_AR[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg]],
+                               X_AR[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg],],
+                               regime_sn_max,
+                               theta,
+                               sigma,
+                               sn[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg]],
+                               sn_sig[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg]],
+                               P,AR_lags,MA_lags,
+                               1,ts_segments$length_AR[seg],temper) ## OwnFunction
+          sn[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg]] <- templist[[1]]
+          #print(seg)
+        }
 
-        templist <- launch_FB_Klaassen(y_AR,X_AR,regime_sn_max,theta,sigma,sn,sn_sig,P,AR_lags,MA_lags,1,taille,temper) ## OwnFunction
-        sn <- templist[[1]]
+
       } else {
-        if(taille<250) {
-          iter_GRAY <- round(5+runif(1, 0, 1)*taille)
-        } else {
-          iter_GRAY <- round(40 + runif(1, 0, 1)*(150))
-        } #
+        for (seg in 1:number_ts_segments){
 
-        for (q in seq(from=1, to=taille, by=iter_GRAY)) {
-
-          if(q+iter_GRAY>taille) {
-            fin <- taille
+          if(ts_segments$length_AR[seg]<250) {
+            iter_GRAY <- round(5+runif(1, 0, 1)*ts_segments$length_AR[seg])
           } else {
-            fin <- q+iter_GRAY
+            iter_GRAY <- round(40 + runif(1, 0, 1)*(150))
           } #
 
-          if(regime_sn_max>1) {
-            if(choix_Haas==0) {
+          for (q in seq(from=1, to=ts_segments$length_AR[seg], by=iter_GRAY)) {
 
-              ###################################DEBUG#################################
-              if (activate_debug == 1) {
-              debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
-              debug_count <- 15
-              xtable_debug_dataframe <- xtable(debug_dataframe)
-              debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
-              write.csv2(xtable_debug_dataframe, file = debug_filename)
-              }
-              #########################################################################
-
-              templist <- launch_FB_Klaassen(y_AR,X_AR,regime_sn_max,theta,sigma,sn,sn_sig,P,AR_lags,MA_lags,q,fin,temper) ## OwnFunction
-              sn <- templist[[1]]
-              accept <- templist[[2]]
+            if(q+iter_GRAY>ts_segments$length_AR[seg]) {
+              fin <- ts_segments$length_AR[seg]
             } else {
-
-              ###################################DEBUG#################################
-              if (activate_debug == 1) {
-              debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
-              debug_count <- 16
-              xtable_debug_dataframe <- xtable(debug_dataframe)
-              debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
-              write.csv2(xtable_debug_dataframe, file = debug_filename)
-              }
-              #########################################################################
-
-              templist <- Haas_FB_ARMA(y_AR,X_AR,taille,regime_sn_max,theta,sigma,sn,sn_sig,P,AR_lags,MA_lags,q,fin,temper) ## OwnFunction
-              sn <- templist[[1]]
-              accept <- templist[[2]]
+              fin <- q+iter_GRAY
             } #
-          } else {
-            accept <- 1
+
+            if(regime_sn_max>1) {
+              if(choix_Haas==0) {
+
+                ###################################DEBUG#################################
+                if (activate_debug == 1) {
+                debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+                debug_count <- 15
+                xtable_debug_dataframe <- xtable(debug_dataframe)
+                debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+                write.csv2(xtable_debug_dataframe, file = debug_filename)
+                }
+                #########################################################################
+                # print(iter_GRAY)
+                # print(seg)
+                # print(q)
+                # print(fin)
+                # print(sn)
+                # print(P)
+
+                templist <- launch_FB_Klaassen(y_AR[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg]],
+                                               X_AR[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg],],
+                                               regime_sn_max,
+                                               theta,
+                                               sigma,
+                                               sn[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg]],
+                                               sn_sig[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg]],
+                                               P,
+                                               AR_lags,
+                                               MA_lags,
+                                               q,
+                                               fin,
+                                               temper) ## OwnFunction
+                sn[ts_segments$index_AR_start[seg]:ts_segments$index_AR_end[seg]] <- templist[[1]]
+                accept <- templist[[2]]
+              } else {
+
+                ###################################DEBUG#################################
+                if (activate_debug == 1) {
+                debug_dataframe <- data.frame(X_AR = X_AR, Regime = regime, dep_MCMC = dep_MCMC, Rolling_MCMC = Rolling_MCMC)
+                debug_count <- 16
+                xtable_debug_dataframe <- xtable(debug_dataframe)
+                debug_filename <- paste0("debug/debug_data_", debug_count, ".csv")
+                write.csv2(xtable_debug_dataframe, file = debug_filename)
+                }
+                #########################################################################
+
+                templist <- Haas_FB_ARMA(y_AR,X_AR,taille,regime_sn_max,theta,sigma,sn,sn_sig,P,AR_lags,MA_lags,q,fin,temper) ## OwnFunction
+                sn <- templist[[1]]
+                accept <- templist[[2]]
+              } #
+            } else {
+              accept <- 1
+            } #
+
+            if((accept>0) && (MA_lags>0)) {
+              GRAY_MH <- GRAY_MH+1
+            } #
+            count_GRAY <- count_GRAY+1
           } #
 
-          if((accept>0) && (MA_lags>0)) {
-            GRAY_MH <- GRAY_MH+1
-          } #
-          count_GRAY <- count_GRAY+1
         } #
-
-      } #
-
+      }
     } else {
       count_GRAY <- count_GRAY+1
       GRAY_MH <- GRAY_MH+1
@@ -1391,9 +1430,10 @@ if(regime>1) {
     templist <- comptage(taille,sn,regime_sn_max) ## OwnFunction
     n_ii <- templist[[1]]
     d_t <- templist[[2]]
+
     if(sampling_sig==1) {
 
-      sn_sig <- launch_FB_sigma(y_AR,X_AR,taille,regime_sn_sig_max,theta,sigma,sn,sn_sig,P_sig,AR_lags,MA_lags,temper,dependance,d_t,dist_sig,lambda)[[1]] ## OwnFunction
+      sn_sig <- launch_FB_sigma(y_AR,X_AR,taille,regime_sn_sig_max,theta,sigma,sn,sn_sig,P_sig,AR_lags,MA_lags,temper,dependance,d_t,dist_sig,lambda, ts_segments)[[1]] ## OwnFunction
     } else if (sampling_sig==0) {
       sn_sig <- matrix(1,taille,1)
     } #
@@ -1963,6 +2003,10 @@ if(regime>1) {
                     as.vector(theta_at_mode, mode = "double"),
                     as.vector(sn_mode[,1], mode = "double"),
                     as.integer(taille),
+                    as.integer(number_ts_segments),
+                    as.vector(ts_segments$index_AR_start, mode="integer"),
+                    as.vector(ts_segments$index_AR_end, mode="integer"),
+                    as.vector(ts_segments$length_AR, mode="integer"),
                     err_out = as.vector(err_out, mode="double"),
                     X_out = as.vector(X_out, mode="double"),
                     PACKAGE="groupedtseries")$err_out

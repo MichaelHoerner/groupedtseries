@@ -25,7 +25,8 @@
  */
 void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, double *X, double *theta,
                  double *sn_current, int *AR_lags, int *MA_lags, int *deb, int *fin, int *path_dep,
-                 double *Unif_rand, double *temper, int *taille, double *sn_move, double *log_like_out,
+                 double *Unif_rand, double *temper, int *taille,
+                 double *sn_move, double *log_like_out,
                  double *log_q_prior_move, double *forward, double *epsilon_Haas)
 {
 
@@ -62,14 +63,14 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
     {
         prob_init[i] = 0;
     }
+
     if((*deb)<=0)
     {
         prob_init[0] = 1;
-    }
-    else
-    {
+    } else {
         prob_init[(int) sn_current[(*deb)-1]] = 1;
     }
+
     taille_current = (*fin)-(*deb)+1;
 
     taille_eps = (*fin)+1;
@@ -80,21 +81,21 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
     for(t=0;t<(*deb);t++)
     {
 
-        //printf(" deb = %d", (*deb));
-        //printf(" fin = %d", (*fin));
+       // printf(" deb = %d", (*deb));
+       // printf(" fin = %d", (*fin));
         //mexPrintf("Iteration %d",t);
         i = (int) sn_current[t];
         eps_reg = 0;
         index = i*taille_ARMA;
         for(z=0;z<(*AR_lags)+1;z++) {
             eps_reg = eps_reg + X[z*(*taille) + t]*theta[index+z];
-          //printf(" X = %f ", X[z*(*taille) + t]);
-          //printf(" theta AR = %f ", theta[index+z]);
+         // printf(" X = %f ", X[z*(*taille) + t]);
+         // printf(" theta AR = %f ", theta[index+z]);
         }
 
         if((*MA_lags)>0) {
             eps_reg = eps_reg + val_prev*theta[index+(*AR_lags)+1];
-            //printf(" theta MA = %f ", theta[index+(*AR_lags)+1]);
+           // printf(" theta MA = %f ", theta[index+(*AR_lags)+1]);
             for(z=(*MA_lags)-1;z>0;z--) {
                 if(t-z-1>=0) {
                     i = (int) sn_current[t-z-1];
@@ -106,7 +107,7 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
         val_prev = eps_reg;
         epsilon_Haas[t + taille_eps*i] = y[t]-eps_reg;
 
-        //printf(" eps_reg = %f \n", eps_reg);
+       // printf(" eps_reg = %f \n", eps_reg);
 
 
     }
@@ -185,16 +186,16 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
 //            mexPrintf("  error_tilde[%d,%d] = %f   ",t+(*deb),i,error_tilde);
 //            mexPrintf("  transition[%d,%d] = %f  \n",t+(*deb),i,transition);
 
-          //printf("Transition: %f", transition);
-           //printf("  i= %d  ", i);
-           //printf("  t= %d  ", t);
+           // printf("Transition: %f", transition);
+          // printf("  i= %d  ", i);
+          // printf("  t= %d  ", t);
            epsilon_Haas[((*deb)+t) + taille_eps*i] = y[(*deb)+t]-eps_reg;
-           //printf("  eps_reg = %f  ", eps_reg);
+          // printf("  eps_reg = %f  \n", eps_reg);
            if(transition>0)
            {
                 //printf("I am still through...");
                 y_sq = epsilon_Haas[((*deb)+t) + taille_eps*i]*epsilon_Haas[((*deb)+t) + taille_eps*i];
-                //printf(" y_sq = %f  ", y_sq);
+               // printf(" y_sq = %f  \n", y_sq);
                 forward[t + taille_current*i] = (*temper)*(-0.5*log(2*PI*sig_current)-0.5*y_sq/sig_current) + log(transition);
                 if(maxi<forward[t + taille_current*i])
                 {
@@ -268,6 +269,8 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
         q_move = log(forward[taille_current-1 + taille_current*i]);
         i = sn_current[(*taille)-1];
         q_stay = log(forward[taille_current-1 + taille_current*i]);
+
+       // printf(" q_stay = %f  \n", q_stay);
         incr = 1;
         (*fin) = (*taille)-2;
 
@@ -293,6 +296,8 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
         {
             back_trans[z] = forward[taille_current-1-incr + z*taille_current]*p_sig[z + q*(*regime_sig)];
             Q = Q + back_trans[z];
+           // printf("forward : %f ", forward[taille_current-1-incr + z*taille_current]);
+           // printf("p_sig : %f \n", p_sig[z + q*(*regime_sig)]);
 
         }
 //          mexPrintf("\n");
@@ -316,6 +321,9 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
         if((*path_dep)==1)
         {
             q_move = q_move + log(back_trans[i]);
+         // printf(" i = %d  ", i);
+         // printf(" q_move = %f  ", q_move);
+         // printf(" back_trans = %f  ", back_trans[i]);
             prior_move = prior_move + log(p_sig[i + q*(*regime_sig)]);
             j = (int) sn_current[t+1];
 
@@ -323,6 +331,10 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
             {
               i = (int) sn_current[t];
               q_stay = q_stay + log(back_trans[i]);
+             // printf(" i = %d  ", i);
+             // printf(" back_trans = %f  ", back_trans[i]);
+             // printf(" q_stay = %f  \n", q_stay);
+
               prior_stay = prior_stay + log(p_sig[i + q*(*regime_sig)]);
             }
             else
@@ -342,6 +354,8 @@ void FB_Klaassen(double *y, int *regime_sig, double *sigma, double *p_sig, doubl
 //                  mexPrintf("\n");
                 i = (int) sn_current[t];
                 q_stay = q_stay + log(back_trans[i]);
+               // printf(" i second = %d  \n", i);
+               // printf(" q_stay = %f  \n", q_stay);
                 prior_stay = prior_stay + log(p_sig[i + j*(*regime_sig)]);
             }
 //              mexPrintf("  q move[%d] = %f",taille_current-1-incr,q_move);

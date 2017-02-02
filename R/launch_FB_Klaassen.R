@@ -3,14 +3,16 @@
 #' @importFrom stats is.ts as.ts
 #' @export
 
-launch_FB_Klaassen <-function( y,X,regime,theta,sigma,sn,sn_sig,p_mat,AR_lags,MA_lags,deb,fin,temper ) {
+launch_FB_Klaassen <- function( y,X,regime,theta,sigma,sn,sn_sig,p_mat,AR_lags,MA_lags,deb,fin,temper) {
+
+
 
 accept <- 0
 lags_q <- 1
 sigma_t <- sigma[sn_sig]
 
 taille <- max(dim(as.data.frame(y)))
-
+#print(taille)
 sn_move <- matrix(0, nrow=taille, ncol=1)
 log_like <- double(length=1)
 log_q_prior <- double(length=4)
@@ -123,6 +125,10 @@ if(MA_lags==0) {
                     as.vector(sn_sig, mode = "double"),
                     as.integer(deb),
                     as.integer(taille),
+                    as.integer(1),
+                    as.integer(1),
+                    as.integer(taille),
+                    as.integer(taille),
                     dens = as.double(dens),
                     eps_out = as.vector(eps_t, mode="double"),
                     PACKAGE="groupedtseries")$dens
@@ -138,13 +144,21 @@ if(MA_lags==0) {
                     as.vector(sn_sig, mode = "double"),
                     as.integer(deb),
                     as.integer(taille),
+                    as.integer(1),
+                    as.integer(1),
+                    as.integer(taille),
+                    as.integer(taille),
                     dens = as.double(dens),
                     eps_out = as.vector(eps_t, mode="double"),
                     PACKAGE="groupedtseries")$dens
 
-  if (any(is.na(log_q_prior)) || any(is.infinite(log_q_prior))){
-    warning("log_q_prior shows an na- or infinite-value")
+  if (any(is.na(log_q_prior)) ){ #|| any(is.infinite(log_q_prior))
+    ##print(log_q_prior)
+    ##print(dens_stay)
+    ##print(dens_move)
+    warning("log_q_prior shows an na-value")
   } else {
+
     if(exp(temper*(dens_move-dens_stay)+log_q_prior[2]+log_q_prior[3]-log_q_prior[1]-log_q_prior[4])>runif(1, 0, 1) ) {
         sn <- sn_move
         accept <- 1

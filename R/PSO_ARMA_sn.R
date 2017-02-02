@@ -91,13 +91,13 @@ for (  i in 1 : nb_iter ) {
                     test <- 1
                     if(AR_lags>0) {
                         root_AR <- polyroot(rev(c(1, -t(theta_prop[2:(1+AR_lags)]))))
-                        if(sum(abs( Re(root_AR))>=1)!=0) {
+                        if(sum(abs( Re(root_AR))>=1)!=0 || any(abs(theta_prop[2:(1+AR_lags)])>=1)) {
                             test <- 0
                            } #
                        } #
                     if(MA_lags>0) {
                         root_MA <- polyroot(rev(c(1, -t(theta_prop[(2+AR_lags):taille_ARMA]))))
-                        if(sum(abs( Re( root_MA))>=1)!=0) {
+                        if(sum(abs( Re( root_MA))>=1)!=0 || any(abs(theta_prop[(2+AR_lags):taille_ARMA])>=1)) {
                             test <- 0
                            } #
                        } #
@@ -190,13 +190,13 @@ for (  i in 1 : nb_iter ) {
                 test <- 1
                 if(AR_lags>0) {
                     root_AR <- polyroot(rev(c(1, -t(theta_prop[2:(1+AR_lags)]))))
-                    if(sum(abs(Re(root_AR))>=1)!=0) {
+                    if(sum(abs(Re(root_AR))>=1)!=0 || any(abs(theta_prop[2:(1+AR_lags)])>=1)) {
                         test <- 0
                        } #
                    } #
                 if(MA_lags>0) {
                     root_MA <- polyroot(rev(c(1, -t(theta_prop[(2+AR_lags):taille_ARMA]))))
-                    if(sum(abs( Re( root_MA))>=1)!=0) {
+                    if(sum(abs( Re( root_MA))>=1)!=0 || any(abs(theta_prop[(2+AR_lags):taille_ARMA])>=1)) {
                         test <- 0
                        } #
                    } #
