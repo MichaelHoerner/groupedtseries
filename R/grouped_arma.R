@@ -46,7 +46,8 @@
 #'
 grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
                                         include.intercept = TRUE, series = NULL, qr.tol = 1e-07,
-                                        quick.estimation = FALSE, ...)
+                                        quick.estimation = FALSE,
+                                        max.fitting.order = NULL, ...)
 {
   #create sequence from 1:N
   seqN <- function(N) {
@@ -59,12 +60,16 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
 
   #target function
   err <- function(coef) {
-    u <- double(n)
-    r_squared_term <- 0
+
+
+    u[1:length(u)] <- 0
+    #r_squared_term <- 0
+    #r_squared_equivalent <- vector(length = n_segments)
 
     for (i in 1:n_segments){
 
-      u_temp <- double(ts_segments$length[i])
+      u_temp[1:length(u_temp)] <- 0
+
 
       if (ts_segments$length[i] > max.order) {
 
@@ -77,37 +82,21 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
                      as.integer(include.intercept),
                      PACKAGE = "groupedtseries")$u
 
-      } else {
-
-        u_temp[1:length(u_temp)] <- 0
-
       }
 
-      u[ts_segments$index_start[i]:ts_segments$index_end[i]] <- u_temp
-
-      #Alternative - return minimum compound R2
-      if (length(unique(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]]))==1) {
-        r_squared_term <-
-          r_squared_term + (ts_segments$length[i]-max.order)*sum((u_temp)^2) /
-          sum((x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]] - mean(na.remove(x)))^2)
-
-        # print(paste0("r_squared_term above: ", r_squared_term))
-
-      } else {
-        r_squared_term <-
-          r_squared_term + (ts_segments$length[i]-max.order)*sum((u_temp)^2) /
-          sum((x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]]-mean(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]]))^2)
-
-        # print(paste0("r_squared_term below: ", r_squared_term))
-        # print(paste0("mean : ", mean(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]])))
-      }
-
+      u[ts_segments$index_start[i]:ts_segments$index_end[i]] <- u_temp[1:ts_segments$length[i]]
+      # r_squared_equivalent[i] <-
+      #   sum((u[ts_segments$index_start[i]:ts_segments$index_end[i]])^2) /
+      #   sum((x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]] -
+      #          mean(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]]))^2)
+      # if (is.na(r_squared_equivalent[i])||is.infinite(r_squared_equivalent[i])) {
+      #   r_squared_equivalent[i] <- 0
+      # }
     }
-    #return of squared error - to be minimized in optimization
-    #return(sum(u^2))
 
-    #Alternative - return minimum compound R2
-    return(r_squared_term)
+    #print(sum(u^2))
+    #return of squared error - to be minimized in optimization
+    return(sum(u^2))
 
   }
 
@@ -148,7 +137,7 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
     return(u)
   }
 
-  #initialize ARMA coefficients - if quick.estimatin == TRUE, this will serve as only
+  #initialize ARMA coefficients - if quick.estimation == TRUE, this will serve as only
   #calculation of coefficients
   arma.init <- function() {
 
@@ -156,7 +145,7 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
 
     k <- max.order
     e <- na.omit(drop(ar.ols(x_wo_na, order.max = k, aic = FALSE,
-                             demean = FALSE, intercept = include.intercept)$resid))
+                             demean = TRUE, intercept = include.intercept)$resid))
     ee <- embed(as.vector(e), max.order + 1)
     xx <- embed(x_wo_na[-(1:k)], max.order + 1)
     if (include.intercept == TRUE) {
@@ -192,6 +181,9 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
   ar.l <- length(lag$ar)
   ma.l <- length(lag$ma)
 
+  if (is.null(max.fitting.order))
+    max.fitting.order <- max.order
+
   n <- nrow(x)
 
   if (NCOL(x) > 2) {
@@ -202,7 +194,7 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
   } else if (NCOL(x) == 1){
     ts_segments <- data.frame(index_start = 1, index_end = n, length = n)
   } else {
-    ts_segments <- index_segments(x, max.order)
+    ts_segments <- index_segments(x, max.fitting.order)
   }
 
   if (is.null(series))
@@ -226,6 +218,7 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
 
   ncoef <- length(unlist(lag)) + as.numeric(include.intercept)
 
+  ######################initialize coefficients##############################
   if (is.null(coef)) {
     if (!is.null(unlist(lag))) {
       coef <- arma.init()
@@ -240,8 +233,38 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
   if (length(coef) != ncoef)
     stop("invalid coef")
 
+  u <- double(n)
+  u_temp <- double(max(ts_segments$length))
+
+  #
+  #test if mean is better estimation than initial coefficients to help algorithm converge faster and better
+  l_coef <- length(coef)
+  coef_alt <- vector(length=l_coef)
+
+  mean_x_wo_lags <- 0
+
+  for (i in 1:n_segments){
+    mean_x_wo_lags <- mean_x_wo_lags + sum(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]])
+  }
+  mean_x_wo_lags <- mean_x_wo_lags/(sum(ts_segments$length)-max.order*n_segments)
+
+  coef_alt[1:(l_coef-1)] <- 0
+  coef_alt[l_coef] <- mean_x_wo_lags
+
+  #print(coef)
+  #print(err(coef))
+  #print(err(coef_alt))
+
+  if (err(coef) > err(coef_alt)) {
+    coef <- coef_alt
+    #print("coefficients changed")
+  }
+  ##################################################################
+
+
+  #########################optimize coefficients####################
   if (quick.estimation == FALSE) {
-    md <- optim(coef, err, gr = NULL, hessian = TRUE, ...)
+    md <- optim(coef, err, gr = NULL, hessian = TRUE, method = "Nelder-Mead", ...)
     coef <- md$par
     rank <- qr(md$hessian, qr.tol)$rank
     if (rank != ncoef) {
@@ -253,13 +276,43 @@ grouped_arma <- function (x, order = c(1, 1), lag = NULL, coef = NULL,
       if (any(diag(vc) < 0))
         warning("Hessian negative-semidefinite")
     }
+    #print(coef)
+    #print(err(coef))
+
+
   } else {
     vc <- matrix(NA, nrow = ncoef, ncol = ncoef)
   }
+  ##################################################################
 
   e <- resid(coef)
 
   f <- x - e
+
+  #just for TEST-purposes
+  #calculate R squared per segment and then as weighted average
+  # r_squared <- 0
+  # temp_r_squared <- vector(length=n_segments)
+  # for (i in 1:n_segments) {
+  #   temp_r_squared[i] <- 1 -
+  #     (sum((x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]] -
+  #             f[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]])^2)/
+  #        sum((x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]] -
+  #               mean(na.remove(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]]))^2)))
+  #   print(paste0("mean",i,": ", mean(x[(ts_segments$index_start[i]+max.order):ts_segments$index_end[i]])))
+  # }
+  # #print(temp_r_squared)
+  # if (any(is.infinite(temp_r_squared))) {
+  #   r_squared <- sum(na.remove(temp_r_squared[-which(is.infinite(temp_r_squared))])) /
+  #     (n_segments - length(which(is.na(temp_r_squared))) - length(which(is.infinite(temp_r_squared))))
+  # } else {
+  #   r_squared <- sum(na.remove(temp_r_squared)) /
+  #     (n_segments - length(which(is.na(temp_r_squared))))
+  # }
+  # print(temp_r_squared)
+  # print("r_squared:")
+  # print(r_squared)
+
 
   if (ists) {
     attr(e, "tsp") <- xtsp
