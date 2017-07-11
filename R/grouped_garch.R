@@ -59,178 +59,150 @@
 
 
 
-grouped_garch <- function (x, order = c(1, 1), series = NULL, control = garch.control(...), ...)
+grouped_garch <- function (x, order = c(1, 1), series = NULL, max.fitting.order = NULL, mean_mode = "no_change",
+                           control = garch.control(...), ...)
 {
-  index.segments <- function() {
 
-    if (length(unique(x[,2])) == 1) {
-      index_start_segment <- 1
-      index_end_segment <- nrow(x)
-    } else {
-      index_start_segment <- c(1,1+which(diff(x[,2])!=0))
-      index_end_segment <- c(index_start_segment[-1] - 1, nrow(x))
-    }
-
-    if (any(is.na(x[,1]))) {
-      index_na <- which(is.na(x[,1]))
-      index_end_na <- index_na - 1
-      index_start_na <- index_na + 1
-
-      #cancel all entries of consecutive na's
-      index_end_na <- index_end_na[!index_end_na %in% index_na]
-      index_start_na <- index_start_na[!index_start_na %in% index_na]
-
-      #delete indizes if they are out of bound
-      if (max(index_start_na) > nrow(x))
-        index_start_na <- index_start_na[-which(index_start_na > nrow(x))]
-      if (min(index_end_na) < 1)
-        index_end_na <- index_end_na[-which(index_end_na < 1)]
-    } else {
-      index_na <- NULL
-      index_end_na <- NULL
-      index_start_na <- NULL
-    }
-
-    #cancel all entries for start/end patient where overlapping with na
-    index_end_segment <- index_end_segment[!index_end_segment %in% index_na]
-    index_start_segment <- index_start_segment[!index_start_segment %in% index_na]
-
-    #concat index vectors and delete duplicates
-    index_start <- unique(sort(c(index_start_na, index_start_segment)))
-    index_end <- unique(sort(c(index_end_na, index_end_segment)))
-
-    #create indizes without NA gaps
-    index_start_wo_na <- index_start
-    index_end_wo_na <- index_end
-    if (length(index_start) > 1) {
-      for (i in 2:length(index_start)) {
-        incr <- index_start[i] - index_end[i-1] - 1
-        index_start_wo_na[i:length(index_start)] <- index_start_wo_na[i:length(index_start)] - incr
-        index_end_wo_na[i:length(index_start)] <- index_end_wo_na[i:length(index_start)] - incr
-      }
-    }
-
-    ts_segments <- data.frame(cbind(index_start, index_end, index_start_wo_na, index_end_wo_na, index_end - index_start + 1))
-    colnames(ts_segments) <- c("index_start", "index_end", "index_start_wo_na", "index_end_wo_na", "length")
-
-    return(ts_segments)
+  if (NCOL(x) > 2) {
+    stop("x is not a vector or univariate time series with indizes.
+               There is at least a third column.")
+  } else if (NCOL(x) == 2 && (any(is.na(x[,2])) || any(x[,2] == 0))) {
+    stop("0 or NA are no valid entries for time series index.")
+  } else if (NCOL(x) == 1){
+    index_x <- c(rep(1, length(x)))
+    x <- cbind(x, index_x)
+    ts_segments <- index_segments(x, max.fitting.order)
+  } else {
+    ts_segments <- index_segments(x, max.fitting.order)
   }
 
-    if (NCOL(x) > 2) {
-      stop("x is not a vector or univariate time series with indizes.
-               There is at least a third column.")
-    } else if (NCOL(x) == 2 && (any(is.na(x[,2])) || any(x[,2] == 0))) {
-      stop("0 or NA are no valid entries for time series index.")
-    } else if (NCOL(x) == 1){
+  if (mean_mode == "mean_whole_series") {
+    x[,1] <- x[,1] - mean(na.remove(x[,1]))
 
-      x_wo_na <- na.omit(x)
-      index_x <- c(rep(1, length(x_wo_na)))
-      x_wo_na <- cbind(x_wo_na, index_x)
-      ts_segments <- index.segments()
-    } else {
-      x_wo_na <- x[!is.na(x[,1]),1:2]
-      ts_segments <- index.segments()
+  } else if (mean_mode == "mean_per_entity") {
+
+    for (f in unique(ts_segments[,6])){
+      temp_mean <- mean(na.remove(x[x[,2]==f,1]))
+      x[x[,2]==f,1] <- x[x[,2]==f,1] - temp_mean
     }
 
+  } else if (mean_mode == "mean_per_segment") {
 
-    if(!is.vector(order)) stop("order is not a vector")
-    switch(control$grad,
-           analytical = (agrad <- TRUE),
-           numerical = (agrad <- FALSE))
-    if(is.null(series)) series <- deparse(substitute(x))
-    ists <- is.ts(x_wo_na)
-    x_wo_na <- as.ts(x_wo_na[,1])
-    xfreq <- frequency(x_wo_na)
-
-    if(ists) xtsp <- tsp(x_wo_na)
-    x_wo_na <- as.matrix(x_wo_na)
-
-    n <- nrow(x)
-    n_wo_na <- nrow(x_wo_na)
-    n_segments <- nrow(ts_segments)
-    n_max_segment <- max(ts_segments$length)
-
-    e <- double(n)
-    e_wo_na <- double(n_wo_na)
-
-    ncoef <- order[1]+order[2]+1
-    hess <- matrix(0.0, ncoef, ncoef)
-    small <- 0.05
-    coef <- control$start
-    if(is.null(coef))
-        coef <- c(var(x_wo_na)*(1.0-small*(ncoef-1)),rep.int(small,ncoef-1))
-    if(!is.vector(coef)) stop("coef is not a vector")
-    if(ncoef != length(coef)) stop("incorrect length of coef")
-    nlikeli <- 1.0e+10
-
-    fit <- .C("fit_grouped_garch",
-              as.vector(x_wo_na, mode = "double"),
-              as.integer(n_wo_na),
-              as.integer(ts_segments[,3]),
-              as.integer(ts_segments[,4]),
-              as.integer(ts_segments[,5]),
-              as.integer(n_segments),
-              coef = as.vector(coef, mode = "double"),
-              as.integer(order[1]),
-              as.integer(order[2]),
-              as.integer(control$maxiter),
-	            as.double(control$abstol),
-	            as.double(control$reltol),
-	            as.double(control$xtol),
-	            as.double(control$falsetol),
-              nlikeli = as.double(nlikeli),
-              as.integer(agrad),
-              as.integer(control$trace),
-              PACKAGE="groupedtseries")
-
-    pred <- .C("pred_grouped_garch",
-               as.vector(x_wo_na, mode = "double"),
-               e_wo_na = as.vector(e_wo_na, mode = "double"),
-               as.integer(ts_segments[,3]),
-               as.integer(ts_segments[,4]),
-               as.integer(ts_segments[,5]),
-               as.integer(n_segments),
-               as.integer(n_wo_na),
-               as.vector(fit$coef, mode = "double"),
-               as.integer(order[1]),
-               as.integer(order[2]),
-               as.integer(FALSE),
-               PACKAGE = "groupedtseries")
-
-    com.hess <- .C("ophess_grouped_garch",
-                   as.vector(x_wo_na, mode = "double"),
-                   as.integer(ts_segments[,3]),
-                   as.integer(ts_segments[,4]),
-                   as.integer(ts_segments[,5]),
-                   as.integer(n_segments),
-                   as.integer(n_wo_na),
-                   as.vector(fit$coef, mode = "double"),
-                   hess = as.matrix(hess),
-                   as.integer(order[1]),
-                   as.integer(order[2]),
-                   PACKAGE="groupedtseries")
-    rank <- do.call("qr", c(list(x = com.hess$hess), control$qr))$rank
-    if(rank != ncoef) {
-	vc <- matrix(NA, nrow = ncoef, ncol = ncoef)
-        warning("singular information")
-    }
-    else
-        vc <- solve(com.hess$hess)
-
-    temp_sigt <- sqrt(pred$e_wo_na)
-    sigt <- as.double(rep(NA, n))
-
-    for (i in 1:n_segments) {
-      if(ts_segments[i,5] > max(order[1],order[2])) {
-        temp_sigt[ts_segments[i,3]:(ts_segments[i,3]+max(order[1],order[2]) -1)] <- rep.int(NA, max(order[1],order[2]))
-        sigt[ts_segments[i,1]:ts_segments[i,2]] <- temp_sigt[ts_segments[i,3]:ts_segments[i,4]]
-      }
+    for (f in 1:nrow(ts_segments)){
+      temp_mean <- mean(x[ts_segments[f,1]:ts_segments[f,2],1])
+      x[ts_segments[f,1]:ts_segments[f,2],1] <- x[ts_segments[f,1]:ts_segments[f,2],1] - temp_mean
     }
 
-    f <- cbind(sigt,-sigt)
-    colnames(f) <- c("sigt","-sigt")
+  } else if (mean_mode == "no_change") {
 
-    e <- as.vector(x[,1])/sigt
+  } else {
+    stop("Selected mode of mean correction is not valid.")
+  }
+
+
+  if(!is.vector(order)) stop("order is not a vector")
+  switch(control$grad,
+         analytical = (agrad <- TRUE),
+         numerical = (agrad <- FALSE))
+  if(is.null(series)) series <- deparse(substitute(x))
+
+  ists <- is.ts(x)
+
+  if(ists){
+    xfreq <- frequency(x)
+    xtsp <- tsp(x)
+  } else {
+    xfreq <- 1
+  }
+
+  n <- nrow(x)
+  n_wo_na <- length(na.omit(x[,1]))
+
+  n_segments <- nrow(ts_segments)
+  n_max_segment <- max(ts_segments$length)
+
+  e <- double(n)
+  h_wo_na <- double(n_wo_na)
+
+  ncoef <- order[1]+order[2]+1
+  hess <- matrix(0.0, ncoef, ncoef)
+  small <- 0.05
+  coef <- control$start
+  if(is.null(coef))
+    coef <- c(var(na.omit(x[,1]))*(1.0-small*(ncoef-1)),rep.int(small,ncoef-1))
+  if(!is.vector(coef)) stop("coef is not a vector")
+  if(ncoef != length(coef)) stop("incorrect length of coef")
+  nlikeli <- 1.0e+10
+
+  fit <- .C("fit_grouped_garch",
+            as.vector(na.omit(x[,1]), mode = "double"),
+            as.integer(n_wo_na),
+            as.integer(ts_segments[,3]),
+            as.integer(ts_segments[,4]),
+            as.integer(ts_segments[,5]),
+            as.integer(n_segments),
+            coef = as.vector(coef, mode = "double"),
+            as.integer(order[2]),
+            as.integer(order[1]),
+            as.integer(control$maxiter),
+            as.double(control$abstol),
+            as.double(control$reltol),
+            as.double(control$xtol),
+            as.double(control$falsetol),
+            nlikeli = as.double(nlikeli),
+            as.integer(agrad),
+            as.integer(control$trace),
+            PACKAGE="groupedtseries")
+
+  pred <- .C("pred_grouped_garch",
+             as.vector(na.omit(x[,1]), mode = "double"),
+             h_wo_na = as.vector(h_wo_na, mode = "double"),
+             as.integer(ts_segments[,3]),
+             as.integer(ts_segments[,4]),
+             as.integer(ts_segments[,5]),
+             as.integer(n_segments),
+             as.integer(n_wo_na),
+             as.vector(fit$coef, mode = "double"),
+             as.integer(order[2]),
+             as.integer(order[1]),
+             as.integer(FALSE),
+             PACKAGE = "groupedtseries")
+
+  com.hess <- .C("ophess_grouped_garch",
+                 as.vector(na.omit(x[,1]), mode = "double"),
+                 as.integer(ts_segments[,3]),
+                 as.integer(ts_segments[,4]),
+                 as.integer(ts_segments[,5]),
+                 as.integer(n_segments),
+                 as.integer(n_wo_na),
+                 as.vector(fit$coef, mode = "double"),
+                 hess = as.matrix(hess),
+                 as.integer(order[2]),
+                 as.integer(order[1]),
+                 PACKAGE="groupedtseries")
+
+  rank <- do.call("qr", c(list(x = com.hess$hess), control$qr))$rank
+  if(rank != ncoef) {
+    vc <- matrix(NA, nrow = ncoef, ncol = ncoef)
+    warning("singular information")
+  } else {
+    vc <- solve(com.hess$hess)
+  }
+
+  temp_sigt <- sqrt(pred$h_wo_na)
+  sigt <- as.double(rep(NA, n))
+
+  for (i in 1:n_segments) {
+    if(ts_segments[i,5] > max(order[1],order[2])) {
+      temp_sigt[ts_segments[i,3]:(ts_segments[i,3]+max(order[1],order[2]) -1)] <- rep.int(NA, max(order[1],order[2]))
+      sigt[ts_segments[i,1]:ts_segments[i,2]] <- temp_sigt[ts_segments[i,3]:ts_segments[i,4]]
+    }
+  }
+
+  f <- cbind(sigt,-sigt)
+  colnames(f) <- c("sigt","-sigt")
+
+  e <- as.vector(x[,1])/sigt
 
     if(ists) {
         attr(e, "tsp") <-  attr(f, "tsp") <- xtsp
@@ -243,22 +215,23 @@ grouped_garch <- function (x, order = c(1, 1), series = NULL, control = garch.co
 
     nam.coef <- "a0"
 
-    if(order[2] > 0)
-        nam.coef <- c(nam.coef, paste("a", seq(order[2]), sep = ""))
     if(order[1] > 0)
-        nam.coef <- c(nam.coef, paste("b", seq(order[1]), sep = ""))
+        nam.coef <- c(nam.coef, paste("a", seq(order[1]), sep = ""))
+    if(order[2] > 0)
+        nam.coef <- c(nam.coef, paste("b", seq(order[2]), sep = ""))
     names(coef) <- nam.coef
     colnames(vc) <- rownames(vc) <- nam.coef
     grouped_garch <- list(order = order,
                   coef = coef,
                   n.likeli = fit$nlikeli,
-                  n.used = n_wo_na,
+                  n.used = n,
                   residuals = e,
                   fitted.values = f,
+                  x = x,
                   series = series,
                   frequency = xfreq,
                   call = match.call(),
-		  vcov = vc)
+		              vcov = vc)
     class(grouped_garch) <- "garch"
     return(grouped_garch)
 }

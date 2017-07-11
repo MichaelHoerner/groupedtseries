@@ -10,14 +10,14 @@
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Library General Public License for more details.
 
-   You should have received a copy of the GNU Library General Public
-   License along with this library; if not, write to the Free
-   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ You should have received a copy of the GNU Library General Public
+ License along with this library; if not, write to the Free
+ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-   GARCH estimation
+ GARCH estimation
 
-   Reference: T. Bollerslev (1986): Generalized Autoregressive Conditional
-   Heteroscedasticity, Journal of Econometrics 31, 307-327. */
+ Reference: T. Bollerslev (1986): Generalized Autoregressive Conditional
+ Heteroscedasticity, Journal of Econometrics 31, 307-327. */
 
 
 #include <R.h>
@@ -36,28 +36,28 @@ static double dsqrarg;
 
 static double dmaxarg1,dmaxarg2;
 #define DMAX(a,b) (dmaxarg1=(a),dmaxarg2=(b),(dmaxarg1) > (dmaxarg2) ?\
-        (dmaxarg1) : (dmaxarg2))
+(dmaxarg1) : (dmaxarg2))
 
 
 struct garch_handler  /* used to set up the additional parameters used in calcf and calcg */
 {
   double* y;  /* the time series to fit */
-  double* h;  /* the conditional variance (cv) */
-  double* dh;  /* dh_i/dp_j */
-  int* index_start;
-  int* index_end;
-  int* index_length;
-  int n_segments;
-  int n;  /* the number of observations */
-  int p, q;  /* GARCH(p,q) */
+double* h;  /* the conditional variance (cv) */
+double* dh;  /* dh_i/dp_j */
+int* index_start;
+int* index_end;
+int* index_length;
+int n_segments;
+int n;  /* the number of observations */
+int p, q;  /* GARCH(p,q) */
 };
 
 static struct garch_handler garch_h;
 
 
 static void F77_SUB(calcf) (int *pq, double *p, int *nf, double *f, int *uiparm,
-			    double *urparm, void (*F77_SUB(ufparm))(void))
-     /* compute negative log likelihood apart from the constant and the pre-sample values */
+                    double *urparm, void (*F77_SUB(ufparm))(void))
+  /* compute negative log likelihood apart from the constant and the pre-sample values */
 {
   int i, j, k, ok;
   int count = 0;
@@ -72,40 +72,40 @@ static void F77_SUB(calcf) (int *pq, double *p, int *nf, double *f, int *uiparm,
   if (p[0] <= 0.0) ok = 0;
   for (i=1; i<(*pq); i++)
     if (p[i] < 0.0) ok = 0;
-  if (ok)  /* parameters are valid */
-  {
-    for (k=0; k<garch_h.n_segments; k++) {
-      if (garch_h.index_length[k] < (maxpq+1)){
-        temp = 0;
-      } else {
-        temp_sum = 0;
+    if (ok)  /* parameters are valid */
+    {
+      for (k=0; k<garch_h.n_segments; k++) {
+        if (garch_h.index_length[k] < (maxpq+1)){
+          temp = 0;
+        } else {
+          temp_sum = 0;
 
-        for (i=maxpq; i<garch_h.index_length[k]; i++)  /* loop over time */
-        {                                    /* compute cv at time i */
-          temp = p[0];  /* compute ARCH part of cv */
-          for (j=1; j<=garch_h.q; j++)
-        	temp += p[j]*DSQR(garch_h.y[garch_h.index_start[k]-1 + i-j]);
-          for (j=1; j<=garch_h.p; j++)  /* compute GARCH part of cv */
-        	temp += p[garch_h.q+j]*garch_h.h[garch_h.index_start[k]-1 + i-j];
-          temp_sum += log(temp)+DSQR(garch_h.y[garch_h.index_start[k]-1 + i])/temp;  /*compute eq. 18 */
-          garch_h.h[garch_h.index_start[k]-1 + i] = temp;  /* assign cv at time i */
+          for (i=maxpq; i<garch_h.index_length[k]; i++)  /* loop over time */
+          {                                    /* compute cv at time i */
+            temp = p[0];  /* compute ARCH part of cv */
+            for (j=1; j<=garch_h.q; j++)
+              temp += p[j]*DSQR(garch_h.y[garch_h.index_start[k]-1 + i-j]);
+            for (j=1; j<=garch_h.p; j++)  /* compute GARCH part of cv */
+            temp += p[garch_h.q+j]*garch_h.h[garch_h.index_start[k]-1 + i-j];
+            temp_sum += log(temp)+DSQR(garch_h.y[garch_h.index_start[k]-1 + i])/temp;  /*compute eq. 18 */
+            garch_h.h[garch_h.index_start[k]-1 + i] = temp;  /* assign cv at time i */
+          }
+
+          /* weighted loglikelyhood */
+          sum += temp_sum; /*(garch_h.index_length[k]-maxpq);*/
+          /*count += garch_h.index_length[k]-maxpq;*/
         }
-
-        /* weighted loglikelyhood */
-        sum += temp_sum; /*(garch_h.index_length[k]-maxpq);*/
-        /*count += garch_h.index_length[k]-maxpq;*/
       }
-    }
 
-    (*f) = 0.5*sum; /*/count;*/
-  }
-  else  /* parameters are invalid */
-    (*f) = BIG;
+      (*f) = 0.5*sum; /*/count;*/
+    }
+    else  /* parameters are invalid */
+          (*f) = BIG;
 }
 
 static void F77_SUB(calcg) (int *pq, double *p, int *nf, double *dp, int *uiparm,
-			    double *urparm, void (*F77_SUB(ufparm))(void))
-     /* compute derivative of negative log likelihood */
+                    double *urparm, void (*F77_SUB(ufparm))(void))
+  /* compute derivative of negative log likelihood */
 {
 
   int i, j, k, m;
@@ -114,47 +114,47 @@ static void F77_SUB(calcg) (int *pq, double *p, int *nf, double *dp, int *uiparm
 
 
   for (k=0; k<(*pq); k++)  /* initialize */
-    dp[k] = 0.0;
+  dp[k] = 0.0;
 
   for (m=0; m<garch_h.n_segments; m++) {
     if (garch_h.index_length[m] < (maxpq+1)){
       temp1 = 0;
       temp2 = 0;
       temp3 = 0;
-     } else {
+    } else {
 
       for (i=maxpq; i<garch_h.index_length[m]; i++)  /* loop over time */
       {                                   /* compute cv at time i and derivatives dh_i/dp_j */
-        temp1 = p[0];  /* compute ARCH part of cv */
-        for (j=1; j<=garch_h.q; j++)
-          temp1 += p[j]*DSQR(garch_h.y[garch_h.index_start[m]-1 + i-j]);
-        for (j=1; j<=garch_h.p; j++)  /* compute GARCH part of cv */
-          temp1 += p[garch_h.q+j]*garch_h.h[garch_h.index_start[m]-1 + i-j];
-        garch_h.h[garch_h.index_start[m]-1 + i] = temp1;  /* assign cv at time i */
-        temp2 = 0.5*(1.0-DSQR(garch_h.y[garch_h.index_start[m]-1 + i])/temp1)/temp1;  /* compute dl_i/dh_i, eq. 19 */
-        temp3 = 1.0;  /* compute dh_i/dp_0, eq. 21 */
-        for (j=1; j<=garch_h.p; j++)
-          temp3 += p[garch_h.q+j]*garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i-j)];
-        garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i)] = temp3;  /* assign dh_i/dp_0 */
-        dp[0] += temp2*temp3;  /* assign dl_i/dp_0 = dl_i/dh_i * dh_i/dp_0 */
-        for (k=1; k<=garch_h.q; k++)  /* compute dl_i/dp_k for the ARCH part, eq. 19 */
-        {
-          temp3 = DSQR(garch_h.y[garch_h.index_start[m]-1 + i-k]);  /* compute dh_i/dp_k, eq. 21 */
-          for (j=1; j<=garch_h.p; j++)
-    	temp3 += p[garch_h.q+j]*garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i-j)+k];
-          garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i) +k] = temp3;  /* assign dh_i/dp_k */
-          dp[k] += temp2*temp3;  /* assign dl_i/dp_k = dl_i/dh_i * dh_i/dp_k */
-        }
-        for (k=1; k<=garch_h.p; k++)  /* compute dl_i/dp_k for the GARCH part, eq. 19 */
-        {
-          temp3 = garch_h.h[garch_h.index_start[m]-1 + i-k];  /* compute dh_i/dp_k, eq. 21 */
-          for (j=1; j<=garch_h.p; j++)
-    	temp3 += p[garch_h.q+j]*garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i-j)+garch_h.q+k];
-          garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i)+garch_h.q+k] = temp3;  /* assign dh_i/dp_k */
-          dp[garch_h.q+k] += temp2*temp3;  /* assign dl_i/dp_k = dl_i/dh_i * dh_i/dp_k */
-        }
+  temp1 = p[0];  /* compute ARCH part of cv */
+  for (j=1; j<=garch_h.q; j++)
+    temp1 += p[j]*DSQR(garch_h.y[garch_h.index_start[m]-1 + i-j]);
+  for (j=1; j<=garch_h.p; j++)  /* compute GARCH part of cv */
+  temp1 += p[garch_h.q+j]*garch_h.h[garch_h.index_start[m]-1 + i-j];
+  garch_h.h[garch_h.index_start[m]-1 + i] = temp1;  /* assign cv at time i */
+  temp2 = 0.5*(1.0-DSQR(garch_h.y[garch_h.index_start[m]-1 + i])/temp1)/temp1;  /* compute dl_i/dh_i, eq. 19 */
+  temp3 = 1.0;  /* compute dh_i/dp_0, eq. 21 */
+  for (j=1; j<=garch_h.p; j++)
+    temp3 += p[garch_h.q+j]*garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i-j)];
+  garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i)] = temp3;  /* assign dh_i/dp_0 */
+  dp[0] += temp2*temp3;  /* assign dl_i/dp_0 = dl_i/dh_i * dh_i/dp_0 */
+  for (k=1; k<=garch_h.q; k++)  /* compute dl_i/dp_k for the ARCH part, eq. 19 */
+  {
+    temp3 = DSQR(garch_h.y[garch_h.index_start[m]-1 + i-k]);  /* compute dh_i/dp_k, eq. 21 */
+  for (j=1; j<=garch_h.p; j++)
+    temp3 += p[garch_h.q+j]*garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i-j)+k];
+  garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i) +k] = temp3;  /* assign dh_i/dp_k */
+  dp[k] += temp2*temp3;  /* assign dl_i/dp_k = dl_i/dh_i * dh_i/dp_k */
+  }
+  for (k=1; k<=garch_h.p; k++)  /* compute dl_i/dp_k for the GARCH part, eq. 19 */
+  {
+    temp3 = garch_h.h[garch_h.index_start[m]-1 + i-k];  /* compute dh_i/dp_k, eq. 21 */
+  for (j=1; j<=garch_h.p; j++)
+    temp3 += p[garch_h.q+j]*garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i-j)+garch_h.q+k];
+  garch_h.dh[(*pq)*(garch_h.index_start[m]-1 + i)+garch_h.q+k] = temp3;  /* assign dh_i/dp_k */
+  dp[garch_h.q+k] += temp2*temp3;  /* assign dl_i/dp_k = dl_i/dh_i * dh_i/dp_k */
+  }
       }
-   }
+    }
   }
 }
 
@@ -168,26 +168,26 @@ void fit_grouped_garch (double *y, int *n, int *index_start, int *index_end, int
                         int *n_segments, double *par, int *p, int *q, int *itmax,
                         double *afctol, double *rfctol, double *xctol, double *xftol,
                         double *fret, int *agrad, int *trace)
-     /* fit a GARCH (p, q) model
+  /* fit a GARCH (p, q) model
 
-	Input:
+   Input:
 
-	y[0..n-1]      series to fit
-	par[0..p+q]    initial parameter estimates
-	p, q           model orders
-	itmax          maximum number of iterations
-	afctol         absolute function convergence tolerance
-        rfctol         relative function convergence tolerance
-        xctol          x-convergence tolerance
-        xftol          false convergence tolerance
-	agrad          estimation with analytical/numerical gradient
-	trace          output yes/no
+   y[0..n-1]      series to fit
+   par[0..p+q]    initial parameter estimates
+   p, q           model orders
+   itmax          maximum number of iterations
+   afctol         absolute function convergence tolerance
+   rfctol         relative function convergence tolerance
+   xctol          x-convergence tolerance
+   xftol          false convergence tolerance
+   agrad          estimation with analytical/numerical gradient
+   trace          output yes/no
 
-	Output:
+   Output:
 
-	par[0..p+q]    parameter estimates at minimum
-	fret           function value at minimum
-     */
+   par[0..p+q]    parameter estimates at minimum
+   fret           function value at minimum
+   */
 {
   int i, j, pq, liv, lv, alg;
   double *d, *v;
@@ -231,16 +231,16 @@ void fit_grouped_garch (double *y, int *n, int *index_start, int *index_end, int
 
   for (j=0; j<garch_h.n_segments; j++) {
     for (i=0; i<garch_h.index_length[j]; i++)  /* estimate unconditional variance (uv) */
-      var += DSQR(y[garch_h.index_start[j]-1 + i]);
+  var += DSQR(y[garch_h.index_start[j]-1 + i]);
     n_wo_na += 1;
   }
   var /= (double) n_wo_na;
   for (i=0; i<DMAX((*p),(*q)); i++)  /* initialize */
   {
     garch_h.h[i] = var;  /* with uv */
-    garch_h.dh[pq*i] = 1.0;  /* dh_i/dp_0 with 1 */
-    for (j=1; j<pq; j++)
-      garch_h.dh[pq*i+j] = 0.0;  /* dh_i/dp_j with 0 */
+  garch_h.dh[pq*i] = 1.0;  /* dh_i/dp_0 with 1 */
+  for (j=1; j<pq; j++)
+    garch_h.dh[pq*i+j] = 0.0;  /* dh_i/dp_j with 0 */
   }
 
 
@@ -248,14 +248,14 @@ void fit_grouped_garch (double *y, int *n, int *index_start, int *index_end, int
   {
     if (*trace) Rprintf ("\n ***** ESTIMATION WITH ANALYTICAL GRADIENT ***** \n\n");
     F77_CALL(dsumsl) (&pq, d, par, F77_SUB(calcf), F77_SUB(calcg),
-		      iv, &liv, &lv, v, NULL, NULL, F77_SUB(ufparm));
+             iv, &liv, &lv, v, NULL, NULL, F77_SUB(ufparm));
     if (*trace) Rprintf ("\n");
   }
   else  /* estimation with numerical gradient */
   {
     if (*trace) Rprintf ("\n ***** ESTIMATION WITH NUMERICAL GRADIENT ***** \n\n");
     F77_CALL(dsmsno) (&pq, d, par, F77_SUB(calcf), iv,
-		      &liv, &lv, v, NULL, NULL, F77_SUB(ufparm));
+             &liv, &lv, v, NULL, NULL, F77_SUB(ufparm));
     if (*trace) Rprintf ("\n");
   }
 
@@ -273,19 +273,19 @@ void fit_grouped_garch (double *y, int *n, int *index_start, int *index_end, int
 
 void pred_grouped_garch (double *y, double *h, int *index_start, int *index_end, int *index_length,
                          int *n_segments, int *n, double *par, int *p, int *q, int *genuine)
-     /* predict cv with a GARCH (p, q) model
+  /* predict cv with a GARCH (p, q) model
 
-	Input:
+   Input:
 
-	y[0..n-1]    series to predict
-	par[0..p+q]  parameters of the GARCH (p, q)
-	p, q         model orders
-	genuine      logical indicating if a genuine prediction is computed
+   y[0..n-1]    series to predict
+   par[0..p+q]  parameters of the GARCH (p, q)
+   p, q         model orders
+   genuine      logical indicating if a genuine prediction is computed
 
-	Output:
+   Output:
 
-	h[0..N]      predicted cv, where N = n for genuine prediction, and N = n-1 otherwise
-     */
+   h[0..N]      predicted cv, where N = n for genuine prediction, and N = n-1 otherwise
+   */
 {
   double var, temp;
   int i, j, k, maxpq, N;
@@ -296,8 +296,11 @@ void pred_grouped_garch (double *y, double *h, int *index_start, int *index_end,
   var = 0.0;
 
   for (i=1; i<=(*p)+(*q); i++)  /* compute uv */
-    var += par[i];
+  var += par[i];
   var = par[0]/(1.0-var);
+
+  /*test - if var negative, take absolute value */
+  if (var<0) var = -var;
 
   for (k=0; k<(*n_segments); k++) {
     if (garch_h.index_length[k] < (maxpq+1)){
@@ -306,14 +309,14 @@ void pred_grouped_garch (double *y, double *h, int *index_start, int *index_end,
       }
     } else {
       for (i=0; i<maxpq; i++)  /* initialize with uv */
-        h[index_start[k]-1 + i] = var;
+  h[index_start[k]-1 + i] = var;
 
       for (i=maxpq; i<index_length[k]; i++)  /* loop over time */
       {                                    /* compute cv at time i */
-        temp = par[0];  /* compute ARCH part of cv */
-        for (j=1; j<=(*q); j++)
-          temp += par[j]*DSQR(y[index_start[k]-1 + i-j]);
-        for (j=1; j<=(*p); j++)  /* compute GARCH part of cv */
+  temp = par[0];  /* compute ARCH part of cv */
+  for (j=1; j<=(*q); j++)
+    temp += par[j]*DSQR(y[index_start[k]-1 + i-j]);
+  for (j=1; j<=(*p); j++)  /* compute GARCH part of cv */
           temp += par[(*q)+j]*h[index_start[k]-1 + i-j];
         h[index_start[k]-1 + i] = temp;  /* assign cv at time i */
       }
