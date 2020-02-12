@@ -4,9 +4,19 @@
 \alias{grouped_arma}
 \title{Fit grouped ARMA model to time series}
 \usage{
-grouped_arma(x, order = c(1, 1), lag = NULL, coef = NULL,
-  include.intercept = TRUE, series = NULL, qr.tol = 1e-07,
-  quick.estimation = FALSE, ...)
+grouped_arma(
+  x,
+  order = c(1, 1),
+  lag = NULL,
+  coef = NULL,
+  include.intercept = TRUE,
+  series = NULL,
+  qr.tol = 1e-07,
+  quick.estimation = FALSE,
+  min_seg_length = NULL,
+  method = "ML",
+  ...
+)
 }
 \arguments{
 \item{x}{a two-dimensional numeric vector of a grouped time series with accompanying group index in second dimension.
@@ -57,4 +67,3 @@ Object of class \code{arma}.
 Fit an ARMA model with the order c(p,q) to a group of univariate time series
 by finding coefficients that serve best the whole group.
 }
-
